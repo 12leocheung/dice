@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DICE-LATRO: CONSUMABLE_LOGIC</title>
+    <style>
+        :root {
+            --neon-green: #39ff14;
+            --dark-green: #0a2f05;
+            --neon-bg: #020501;
+            --firewall-bg: #051a05;
+            --glow: 0 0 12px rgba(57, 255, 20, 0.7);
+            --heavy-glow: 0 0 25px rgba(57, 255, 20, 0.9);
+        }
+
+        @keyframes globalGlitch {
+            0% { transform: translate(0); }
+            2% { transform: translate(-7px, 3px) skewX(15deg); filter: brightness(2); }
+            4% { transform: translate(7px, -3px) skewX(-15deg); }
+            6% { transform: translate(0); filter: brightness(1); }
+            100% { transform: translate(0); }
+        }
+
+        .glitching { animation: globalGlitch 0.4s step-end infinite; }
+
+        body {
+            background-color: var(--neon-bg); color: var(--neon-green);
+            font-family: 'Courier New', Courier, monospace;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; margin: 0; text-transform: uppercase; overflow: hidden;
+            text-shadow: var(--glow);
+        }
+
+        #game-container {
+            width: 900px; height: 780px; background: var(--neon-bg);
+            border: 4px solid var(--neon-green); padding: 25px; position: relative;
+            box-shadow: var(--heavy-glow); display: flex; flex-direction: column;
+        }
+
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid var(--neon-green); padding-bottom: 15px; }
+        .money-terminal { border: 3px solid var(--neon-green); padding: 10px 25px; background: var(--dark-green); box-shadow: var(--heavy-glow); text-align: right; }
+        .money-value { font-size: 2.8rem; font-weight: 900; }
+
+        .dice-display { display: flex; gap: 15px; justify-content: center; margin: 25px 0; min-height: 85px; }
+        .die {
+            width: 75px; height: 75px; border: 3px solid var(--neon-green);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 32px; font-weight: bold; cursor: pointer;
+            background: rgba(0,0,0,0.8); box-shadow: var(--glow);
+        }
+        .die.blank { border: 2px dashed var(--neon-green); opacity: 0.2; }
+        .die.held { background: var(--neon-green); color: black; transform: translateY(-10px); }
+
+        /* CONSUMABLE SLOT */
+        #consumable-zone {
+            margin: 10px 0; padding: 10px; border: 1px double var(--neon-green);
+            display: flex; align-items: center; gap: 20px; background: rgba(57, 255, 20, 0.05);
+        }
+        .cons-btn { 
+            background: var(--neon-green); color: black; border: none; padding: 5px 15px; 
+            font-weight: bold; cursor: pointer; display: none;
+        }
+
+        #passive-bin { margin-top: auto; border-top: 1px solid var(--neon-green); padding-top: 10px; }
+        #joker-list { display: flex; gap: 8px; height: 80px; align-items: center; overflow-x: auto; }
+        .joker-card { border: 1px solid var(--neon-green); padding: 6px; font-size: 0.55rem; background: var(--dark-green); min-width: 100px; }
+
+        #screen-shop { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--neon-bg); z-index: 50; padding: 25px; overflow-y: auto; }
+        .shop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px;}
+        .shop-card { border: 2px solid var(--neon-green); padding: 12px; text-align: center; cursor: pointer; background: var(--dark-green); }
+        .shop-type { font-size: 0.5rem; color: #fff; background: #333; padding: 2px; margin-bottom: 5px; display: inline-block;}
+
+        button { background: transparent; color: var(--neon-green); border: 2px solid var(--neon-green); padding: 12px 30px; cursor: pointer; font-weight: bold; font-family: inherit; }
+        button:hover:not(:disabled) { background: var(--neon-green); color: black; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="header">
+        <div>
+            <div>CYCLE: <span id="round-ui">1</span></div>
+            <div style="font-size: 1.5rem;">QUOTA: <span id="target-ui">0</span></div>
+        </div>
+        <div class="money-terminal">
+            <span style="font-size: 0.7rem;">SYSTEM_CREDITS</span><br>
+            $<span id="bank-ui" class="money-value">0</span>
+        </div>
+    </div>
+
+    <div id="screen-play">
+        <div style="text-align: center; font-size: 2.5rem; margin-top: 15px;">
+            <span id="last-sum">0</span> x <span id="mult-ui">1.0</span>
+        </div>
+        <div class="dice-display" id="dice-box"></div>
+        
+        <div id="consumable-zone">
+            <span style="font-size: 0.7rem;">CONS_SLOT:</span>
+            <span id="cons-name" style="font-weight: bold; color: white;">EMPTY</span>
+            <button id="use-cons-btn" class="cons-btn" onclick="useConsumable()">USE_ITEM</button>
+        </div>
+
+        <div class="controls" style="display: flex; justify-content: center; gap: 30px; align-items: center;">
+            <div style="font-size: 0.9rem;">REROLLS: <span id="rerolls-ui">2</span></div>
+            <button id="roll-btn" onclick="runRoll()">EXEC_ROLL</button>
+            <button id="cash-btn" onclick="enterShop()" style="border-style: double;" disabled>UPLINK</button>
+        </div>
+        <p id="hand-msg" style="text-align: center; font-size: 1.4rem; height: 30px; margin: 10px 0;"></p>
+    </div>
+
+    <div id="passive-bin">
+        <div style="font-size: 0.6rem;">HARDWARE_INVENTORY</div>
+        <div id="joker-list"></div>
+    </div>
+
+    <div id="screen-shop" class="hidden">
+        <div class="header" style="border:none">
+            <h2 style="font-size: 1.8rem;">MARKET_UPLINK</h2>
+            <div class="money-terminal" style="transform: scale(0.7);">$<span id="shop-bank-ui" class="money-value">0</span></div>
+        </div>
+        <div class="shop-grid" id="shop-items"></div>
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="startNextRound()">NEXT_CYCLE</button>
+        </div>
+    </div>
+
+    <div id="screen-over" class="hidden" style="text-align: center; padding-top: 180px;">
+        <h1 style="font-size: 4rem;">CORE_DUMPED</h1>
+        <button onclick="location.reload()">RELOAD</button>
+    </div>
+</div>
+
+<script>
+    let g = {
+        round: 1, target: 0, bank: 0, 
+        baseMult: 1.0, rerolls: 2, maxRerolls: 2,
+        dice: Array(4).fill(null).map(() => ({ v: null, held: false, sides: [1,2,3,4,5,6] })),
+        passives: [],
+        consumable: null,
+        firstRollDone: false,
+        extraScore: 0
+    };
+
+    const targets = [0, 0, 0, 50, 100, 500, 1000, 5000, 15000, 50000];
+
+    setInterval(() => {
+        const container = document.getElementById('game-container');
+        if (Math.random() > 0.92) {
+            container.classList.add('glitching');
+            setTimeout(() => container.classList.remove('glitching'), 250);
+        }
+    }, 3000);
+
+    function initBoard() {
+        const box = document.getElementById('dice-box');
+        box.innerHTML = '';
+        g.dice.forEach((d) => {
+            let div = document.createElement('div');
+            div.className = `die ${d.v === null ? 'blank' : ''} ${d.held ? 'held' : ''}`;
+            div.innerText = d.v === null ? '' : d.v;
+            div.onclick = () => { if(g.firstRollDone) { d.held = !d.held; initBoard(); } };
+            box.appendChild(div);
+        });
+        calculatePotential();
+    }
+
+    function runRoll() {
+        if (g.rerolls <= 0 && g.firstRollDone) return;
+        if (g.firstRollDone) g.rerolls--;
+        g.firstRollDone = true;
+        document.getElementById('cash-btn').disabled = false;
+        if(g.consumable) document.getElementById('use-cons-btn').style.display = 'block';
+        
+        g.dice.forEach(d => { if (!d.held) d.v = d.sides[Math.floor(Math.random() * d.sides.length)]; });
+        document.getElementById('rerolls-ui').innerText = g.rerolls;
+        if(g.rerolls <= 0) document.getElementById('roll-btn').disabled = true;
+        initBoard();
+    }
+
+    function useConsumable() {
+        if (!g.consumable) return;
+        if (g.consumable.type === 'DEBUG') { g.rerolls = g.maxRerolls; document.getElementById('roll-btn').disabled = false; }
+        if (g.consumable.type === 'PATCH') { g.extraScore += 250; }
+        
+        g.consumable = null;
+        document.getElementById('cons-name').innerText = "EMPTY";
+        document.getElementById('use-cons-btn').style.display = 'none';
+        document.getElementById('rerolls-ui').innerText = g.rerolls;
+        initBoard();
+    }
+
+    function calculatePotential() {
+        if (!g.firstRollDone) return 0;
+        let vals = g.dice.map(d => d.v).filter(v => v !== null).sort((a,b) => a-b);
+        let sum = vals.reduce((a,b) => a+b, 0);
+        let bonusMult = 0;
+        let handName = "";
+
+        let counts = {};
+        vals.forEach(v => counts[v] = (counts[v] || 0) + 1);
+        let cArr = Object.values(counts).sort((a,b) => b-a);
+        let uniqueVals = [...new Set(vals)];
+        let isStraight = uniqueVals.length >= 4 && uniqueVals.every((v, i) => i === 0 || v === uniqueVals[i-1] + 1);
+
+        if (isStraight) { bonusMult = 20; handName = "SPECTRAL STRAIGHT"; }
+        else if (cArr[0] >= 5) { bonusMult = 10; handName = "FIVE OF A KIND"; }
+        else if (cArr[0] === 4) { bonusMult = 6; handName = "FOUR OF A KIND"; }
+        else if (cArr[0] === 3 && cArr[1] === 2) { bonusMult = 4; handName = "FULL HOUSE"; }
+        else if (cArr[0] === 3) { bonusMult = 2.5; handName = "THREE OF A KIND"; }
+        else if (cArr[0] === 2 && cArr[1] === 2) { bonusMult = 1.5; handName = "TWO PAIR"; }
+        else if (cArr[0] === 2) { bonusMult = 1; handName = "PAIR"; }
+
+        g.passives.forEach(p => {
+            if(p === "SNIPER" && vals.includes(6)) bonusMult += 3;
+            if(p === "GAMBLER" && vals.includes(1)) bonusMult += 2;
+        });
+
+        let finalMult = g.baseMult + bonusMult;
+        let finalScore = Math.floor(sum * finalMult) + g.extraScore;
+        document.getElementById('last-sum').innerText = sum + (g.extraScore > 0 ? ` (+${g.extraScore})` : "");
+        document.getElementById('mult-ui').innerText = finalMult.toFixed(1);
+        document.getElementById('hand-msg').innerText = handName;
+        return finalScore;
+    }
+
+    function enterShop() {
+        let score = calculatePotential();
+        if (g.round >= 4 && score < g.target) {
+            document.getElementById('screen-play').classList.add('hidden');
+            document.getElementById('screen-over').classList.remove('hidden');
+            return;
+        }
+        g.bank += score;
+        updateUI();
+        document.getElementById('shop-bank-ui').innerText = g.bank;
+        document.getElementById('screen-shop').classList.remove('hidden');
+        genShop();
+    }
+
+    function genShop() {
+        const catalog = [
+            { n: "MULT +0.3", d: "Boost base mult.", c: 20, type: "PERM", f: () => g.baseMult += 0.3 },
+            { n: "DEBUG.EXE", d: "Refill Rerolls.", c: 20, type: "CONS", f: () => g.consumable = {type:'DEBUG', name:'DEBUG.EXE'} },
+            { n: "PATCH.FIX", d: "+250 flat score.", c: 40, type: "CONS", f: () => g.consumable = {type:'PATCH', name:'PATCH.FIX'} },
+            { n: "CORE DIE", d: "Add permanent D6.", c: 60, type: "PERM", f: () => g.dice.push({v:null, held:false, sides:[1,2,3,4,5,6]}) },
+            { n: "SNIPER.MOD", d: "+3 Mult on 6.", c: 45, type: "PERM", f: () => addPassive("SNIPER", "+3 Mult on 6") },
+            { n: "GAMBLER.MOD", d: "+2 Mult on 1.", c: 45, type: "PERM", f: () => addPassive("GAMBLER", "+2 Mult on 1") }
+        ];
+        const container = document.getElementById('shop-items');
+        container.innerHTML = '';
+        catalog.sort(() => 0.5 - Math.random()).slice(0, 3).forEach(item => {
+            let card = document.createElement('div');
+            card.className = 'shop-card';
+            card.innerHTML = `<span class="shop-type">${item.type}</span><br><strong>${item.n}</strong><div style="font-size:0.55rem">${item.d}</div><br>$${item.c}`;
+            card.onclick = () => {
+                if (g.bank >= item.c) { 
+                    if(item.type === "CONS" && g.consumable) return; // Only 1 cons at a time
+                    g.bank -= item.c; item.f(); 
+                    document.getElementById('shop-bank-ui').innerText = g.bank;
+                    card.style.opacity = 0.2; card.onclick=null; 
+                }
+            };
+            container.appendChild(card);
+        });
+    }
+
+    function addPassive(name, desc) {
+        if (g.passives.includes(name)) return;
+        g.passives.push(name);
+        let tag = document.createElement('div');
+        tag.className = 'joker-card'; tag.innerHTML = `<strong>${name}</strong><br>${desc}`;
+        document.getElementById('joker-list').appendChild(tag);
+    }
+
+    function startNextRound() {
+        g.round++;
+        g.rerolls = g.maxRerolls;
+        g.firstRollDone = false;
+        g.extraScore = 0;
+        g.dice.forEach(d => { d.held = false; d.v = null; });
+        g.target = targets[g.round] || Math.floor(targets[targets.length-1] * Math.pow(2.2, g.round - 9));
+        
+        document.getElementById('screen-shop').classList.add('hidden');
+        document.getElementById('roll-btn').disabled = false;
+        document.getElementById('cash-btn').disabled = true;
+        document.getElementById('rerolls-ui').innerText = g.rerolls;
+        document.getElementById('cons-name').innerText = g.consumable ? g.consumable.name : "EMPTY";
+        document.getElementById('use-cons-btn').style.display = 'none';
+        initBoard();
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('round-ui').innerText = g.round;
+        document.getElementById('target-ui').innerText = g.target;
+        document.getElementById('bank-ui').innerText = g.bank;
+        document.getElementById('mult-ui').innerText = g.baseMult.toFixed(1);
+    }
+
+    initBoard();
+    updateUI();
+</script>
+</body>
+</html>

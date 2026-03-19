@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DICE-LATRO: CONSUMABLE_LOGIC</title>
+    <title>DICE-LATRO: UNLIMITED_EDITION</title>
     <style>
         :root {
             --neon-green: #39ff14;
@@ -52,7 +52,6 @@
         .die.blank { border: 2px dashed var(--neon-green); opacity: 0.2; }
         .die.held { background: var(--neon-green); color: black; transform: translateY(-10px); }
 
-        /* CONSUMABLE SLOT */
         #consumable-zone {
             margin: 10px 0; padding: 10px; border: 1px double var(--neon-green);
             display: flex; align-items: center; gap: 20px; background: rgba(57, 255, 20, 0.05);
@@ -143,7 +142,8 @@
         extraScore: 0
     };
 
-    const targets = [0, 0, 0, 50, 100, 500, 1000, 5000, 15000, 50000];
+    // --- ACCESSIBLE QUOTAS ---
+    const targets = [0, 0, 0, 25, 50, 100, 250, 500, 1000, 2500];
 
     setInterval(() => {
         const container = document.getElementById('game-container');
@@ -254,13 +254,15 @@
             let card = document.createElement('div');
             card.className = 'shop-card';
             card.innerHTML = `<span class="shop-type">${item.type}</span><br><strong>${item.n}</strong><div style="font-size:0.55rem">${item.d}</div><br>$${item.c}`;
+            
+            // --- INFINITE CREDITS LOGIC ---
             card.onclick = () => {
-                if (g.bank >= item.c) { 
-                    if(item.type === "CONS" && g.consumable) return; // Only 1 cons at a time
-                    g.bank -= item.c; item.f(); 
-                    document.getElementById('shop-bank-ui').innerText = g.bank;
-                    card.style.opacity = 0.2; card.onclick=null; 
-                }
+                if(item.type === "CONS" && g.consumable) return; 
+                g.bank -= item.c; // Credits will go negative if needed, no limit
+                item.f(); 
+                document.getElementById('shop-bank-ui').innerText = g.bank;
+                card.style.opacity = 0.2; 
+                card.onclick = null; 
             };
             container.appendChild(card);
         });
@@ -280,7 +282,7 @@
         g.firstRollDone = false;
         g.extraScore = 0;
         g.dice.forEach(d => { d.held = false; d.v = null; });
-        g.target = targets[g.round] || Math.floor(targets[targets.length-1] * Math.pow(2.2, g.round - 9));
+        g.target = targets[g.round] || Math.floor(targets[targets.length-1] * Math.pow(1.5, g.round - 9));
         
         document.getElementById('screen-shop').classList.add('hidden');
         document.getElementById('roll-btn').disabled = false;

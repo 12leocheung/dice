@@ -182,6 +182,9 @@ body { animation: phFlicker 6s step-end infinite; }
   letter-spacing: 3px; color: var(--ng3); text-shadow: var(--glow2);
   transition: all 0.2s;
 }
+#hand-name.legendary { color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,215,0,0.4); animation: legendPulse 0.8s ease-out; }
+#hand-name.epic { color: var(--purple); text-shadow: 0 0 20px rgba(191,95,255,0.8); animation: legendPulse 0.8s ease-out; }
+@keyframes legendPulse { 0%{transform:scale(1.3);opacity:0.5} 60%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
 #score-total {
   text-align: center; font-size: 3rem; font-weight: 900;
   line-height: 1; text-shadow: var(--glow2);
@@ -595,7 +598,7 @@ let g = {
   firstRollDone: false, glassRerolled: false,
   roundScore: 0, shopRerollCost: 5,
   handsPlayed: 0, totalScore: 0,
-  handLevels: { 'PAIR':1, 'TWO_PAIR':1, 'THREE_OF_A_KIND':1, 'STRAIGHT':1, 'FULL_HOUSE':1, 'FOUR_OF_A_KIND':1, 'FIVE_OF_A_KIND':1, 'HIGH_CARD':1 }
+  handLevels: { 'PAIR':1, 'TWO_PAIR':1, 'THREE_OF_A_KIND':1, 'STRAIGHT':1, 'FULL_HOUSE':1, 'FOUR_OF_A_KIND':1, 'FIVE_OF_A_KIND':1, 'SIX_OF_A_KIND':1, 'SEVEN_OF_A_KIND':1, 'EIGHT_OF_A_KIND':1, 'NINE_OF_A_KIND':1, 'TEN_OF_A_KIND':1, 'HIGH_CARD':1 }
 };
 
 // ANTE structure: [target, reward]
@@ -604,18 +607,41 @@ const ANTE_TABLE = [
 ];
 const MAX_ANTE = ANTE_TABLE.length;
 
-// HAND DEFINITIONS: [baseChips, baseMult, name, label]
+// HAND DEFINITIONS — N_OF_A_KIND is generated dynamically for N>=5
 const HANDS = {
-  HIGH_CARD:       { c:2,  m:1,   n:'HIGH CARD',       label:'single high' },
-  PAIR:            { c:4,  m:1.5, n:'PAIR',             label:'two matching' },
-  TWO_PAIR:        { c:8,  m:2,   n:'TWO PAIR',         label:'two pairs' },
-  THREE_OF_A_KIND: { c:12, m:2.5, n:'THREE OF A KIND',  label:'three matching' },
-  STRAIGHT:        { c:15, m:3,   n:'STRAIGHT',         label:'sequential run' },
-  FULL_HOUSE:      { c:18, m:3.5, n:'FULL HOUSE',       label:'three + two' },
-  FOUR_OF_A_KIND:  { c:25, m:5,   n:'FOUR OF A KIND',   label:'four matching' },
-  FIVE_OF_A_KIND:  { c:35, m:7,   n:'FIVE OF A KIND',   label:'five matching' },
-  STRAIGHT_FLUSH:  { c:45, m:10,  n:'SPECTRAL STRAIGHT',label:'straight + flush' },
+  HIGH_CARD:       { c:2,  m:1,   n:'HIGH CARD',        label:'single high' },
+  PAIR:            { c:4,  m:1.5, n:'PAIR',              label:'two matching' },
+  TWO_PAIR:        { c:8,  m:2,   n:'TWO PAIR',          label:'two pairs' },
+  THREE_OF_A_KIND: { c:12, m:2.5, n:'THREE OF A KIND',   label:'three matching' },
+  STRAIGHT:        { c:15, m:3,   n:'STRAIGHT',          label:'sequential run' },
+  FULL_HOUSE:      { c:18, m:3.5, n:'FULL HOUSE',        label:'three + two' },
+  FOUR_OF_A_KIND:  { c:25, m:5,   n:'FOUR OF A KIND',    label:'four matching' },
+  FIVE_OF_A_KIND:  { c:40, m:8,   n:'FIVE OF A KIND',    label:'five matching' },
+  SIX_OF_A_KIND:   { c:60, m:12,  n:'SIX OF A KIND',     label:'six matching' },
+  SEVEN_OF_A_KIND: { c:85, m:17,  n:'SEVEN OF A KIND',   label:'seven matching' },
+  EIGHT_OF_A_KIND: { c:115,m:24,  n:'EIGHT OF A KIND',   label:'eight matching' },
+  NINE_OF_A_KIND:  { c:150,m:32,  n:'NINE OF A KIND',    label:'nine matching' },
+  TEN_OF_A_KIND:   { c:200,m:45,  n:'TEN OF A KIND',     label:'legendary' },
 };
+
+// For N > 10, generate dynamically
+function getNOfAKindKey(n) {
+  const keys = ['','','PAIR','THREE_OF_A_KIND','FOUR_OF_A_KIND','FIVE_OF_A_KIND','SIX_OF_A_KIND','SEVEN_OF_A_KIND','EIGHT_OF_A_KIND','NINE_OF_A_KIND','TEN_OF_A_KIND'];
+  if(n < 2) return 'HIGH_CARD';
+  if(n <= 10) return keys[n];
+  // Beyond 10: synthetic
+  return `${n}_OF_A_KIND`;
+}
+
+function getHandDef(key) {
+  if(HANDS[key]) return HANDS[key];
+  // Dynamic N-of-a-kind beyond 10
+  const n = parseInt(key);
+  if(!isNaN(n)) {
+    return { c: 200 + (n-10)*60, m: 45 + (n-10)*15, n: `${n} OF A KIND`, label:`${n} matching` };
+  }
+  return HANDS.HIGH_CARD;
+}
 
 function initGame() {
   g.dice = [
@@ -743,7 +769,6 @@ function gameOver() {
 //  SCORING
 // ══════════════════════════════════════════════════════
 function getHandInfo() {
-  // Separate bronze (wild) dice from normal dice
   const bronzeDice = g.dice.filter(d => d.material === 'bronze' && d.v !== null && !d.shattered);
   const normalDice = g.dice.filter(d => d.material !== 'bronze' && d.v !== null && !d.shattered);
   const vals = normalDice.map(d=>d.v).sort((a,b)=>a-b);
@@ -754,29 +779,45 @@ function getHandInfo() {
   let counts={};
   vals.forEach(v => counts[v]=(counts[v]||0)+1);
   const cArr = Object.values(counts).sort((a,b)=>b-a);
-  // Add wilds to top group
-  if(wildCount > 0 && cArr.length > 0) cArr[0] += wildCount;
-  else if(wildCount > 0) cArr.push(wildCount);
+  // Best group gets all wilds
+  const topCount = (cArr[0] || 0) + wildCount;
+  const secondCount = cArr[1] || 0;
   const uniq = [...new Set(vals)];
   const totalDice = vals.length + wildCount;
-  const isStraight = uniq.length >= 4 && uniq.every((v,i)=>i===0||v===uniq[i-1]+1);
-  const allSame = (uniq.length === 1 && wildCount === 0) || (cArr[0] >= totalDice);
+  const isStraight = uniq.length >= 4 && uniq.every((v,i) => i===0 || v===uniq[i-1]+1);
 
-  let key = 'HIGH_CARD';
-  if (totalDice >= 5 && allSame) key = 'FIVE_OF_A_KIND';
-  else if (isStraight && totalDice >= 4) key = 'STRAIGHT';
-  else if (cArr[0] >= 4) key = 'FOUR_OF_A_KIND';
-  else if (cArr[0] >= 3 && (cArr[1] >= 2)) key = 'FULL_HOUSE';
-  else if (cArr[0] >= 3) key = 'THREE_OF_A_KIND';
-  else if (cArr[0] >= 2 && cArr[1] >= 2) key = 'TWO_PAIR';
-  else if (cArr[0] >= 2) key = 'PAIR';
+  let key;
 
-  const def = HANDS[key];
+  // N-of-a-kind: any count >= 2 of the same value (with wilds on top)
+  if(topCount >= 2) {
+    // Check if it qualifies as a straight first (straights beat lower N-of-a-kind)
+    if(isStraight && totalDice >= 4 && topCount < 4) {
+      key = 'STRAIGHT';
+    } else if(topCount >= 4 && secondCount >= 2 && topCount < totalDice) {
+      // Full house variant — only when not all same
+      key = topCount >= 3 && secondCount >= 2 ? 'FULL_HOUSE' : getNOfAKindKey(topCount);
+      // Full house only if top group isn't already N-of-a-kind for all dice
+      if(topCount + secondCount < totalDice) key = getNOfAKindKey(topCount);
+      else if(topCount >= 3 && secondCount >= 2) key = topCount >= 4 ? getNOfAKindKey(topCount) : 'FULL_HOUSE';
+    } else if(topCount === 3 && secondCount === 2) {
+      key = 'FULL_HOUSE';
+    } else if(topCount >= 2 && secondCount >= 2 && topCount < 3) {
+      key = 'TWO_PAIR';
+    } else {
+      key = getNOfAKindKey(topCount);
+    }
+  } else if(isStraight && totalDice >= 4) {
+    key = 'STRAIGHT';
+  } else {
+    key = 'HIGH_CARD';
+  }
+
+  const def = getHandDef(key);
   const lv = g.handLevels[key] || 1;
   const allVals = [...vals, ...bronzeDice.map(d=>d.v)];
   return {
     key, vals: allVals,
-    handName: def.n + (lv > 1 ? ` LV${lv}` : '') + (wildCount > 0 ? ` [${wildCount}W]` : ''),
+    handName: def.n + (lv > 1 ? ` LV${lv}` : '') + (wildCount > 0 ? ` [${wildCount}✦]` : ''),
     chips: def.c + (lv-1)*10,
     mult:  def.m + (lv-1)*0.5,
   };
@@ -851,6 +892,13 @@ function calculateScore(commit=false) {
   const total = Math.floor(chips * mult * glassMultiplier);
 
   document.getElementById('hand-name').innerText = handName;
+  // Visual flair for big hands
+  const handEl = document.getElementById('hand-name');
+  handEl.className = '';
+  const nokKeys = ['SIX_OF_A_KIND','SEVEN_OF_A_KIND','EIGHT_OF_A_KIND','NINE_OF_A_KIND','TEN_OF_A_KIND'];
+  const n = parseInt(key);
+  if(nokKeys.includes(key) || (!isNaN(n) && n >= 6)) handEl.classList.add('legendary');
+  else if(key === 'FIVE_OF_A_KIND') handEl.classList.add('epic');
   document.getElementById('score-total').innerText = total;
 
   // Chips display
@@ -887,14 +935,14 @@ function applyJoker(j, handKey, vals, chips, mult) {
     case 'VALIDATOR':  if(vals.every(v=>v%2===0)){ mult += 2.5; desc='+2.5M all even'; } break;
     case 'PRIME':      if(vals.every(v=>[2,3,5,7,11,13,17,19,23].includes(v))){ chips += 10; mult += 1.5; desc='prime bonus'; } break;
     case 'HIGHROLLER': { const max=Math.max(...vals); chips+=max; desc=`+${max}C max`; } break;
-    case 'ALLIN':      if(handKey==='FOUR_OF_A_KIND'||handKey==='FIVE_OF_A_KIND'){ mult *= 2; desc='x2M quads+'; } break;
+    case 'ALLIN':      { const n=parseInt(handKey); if(handKey==='FOUR_OF_A_KIND'||handKey==='FIVE_OF_A_KIND'||handKey==='SIX_OF_A_KIND'||handKey==='SEVEN_OF_A_KIND'||handKey==='EIGHT_OF_A_KIND'||handKey==='NINE_OF_A_KIND'||handKey==='TEN_OF_A_KIND'||(!isNaN(n)&&n>=4)){ mult *= 2; desc='x2M quads+'; } } break;
     case 'HEDGER':     chips += vals.length * 1; desc=`+${vals.length}C per die`; break;
     case 'DEBUGGER':   if(g.rerolls === g.maxRerolls){ mult += 1; desc='+1M full rerolls'; } break;
     case 'SYMMETRY':   if(vals.every((v,i,a)=>i===0||a[i-1]<=v)){ chips+=6; desc='+6C sorted'; } break;
     case 'FIREWALL':   mult += Math.floor(g.jokers.length * 0.3); desc=`+${Math.floor(g.jokers.length*0.3)}M per joker`; break;
     case 'ENTROPY':    { const bonus=Math.floor(Math.random()*5); chips+=bonus; desc=`+${bonus}C chaos`; } break;
     case 'OVERKILL':   if(g.roundScore > g.target*0.5){ mult += 1.5; desc='+1.5M halfway'; } break;
-    case 'MIRRORDICE': if(new Set(vals).size===1){ mult += 4; desc='+4M all same!'; } break;
+    case 'MIRRORDICE': { const n=parseInt(handKey); const isNoak = ['FIVE_OF_A_KIND','SIX_OF_A_KIND','SEVEN_OF_A_KIND','EIGHT_OF_A_KIND','NINE_OF_A_KIND','TEN_OF_A_KIND'].includes(handKey)||(!isNaN(n)&&n>=5)||handKey==='FIVE_OF_A_KIND'; if(isNoak||new Set(vals).size===1){ mult += 4; desc='+4M all same!'; } } break;
     case 'LOWBALL':      { const lowCount = vals.filter(v=>v<=3).length; chips += lowCount; desc=lowCount?`+${lowCount}C low`:''; } break;
     case 'COUNTER':      { const unique = new Set(vals).size; mult += unique; desc=`+${unique}M unique`; } break;
     case 'ECHO':         { let counts={}; vals.forEach(v=>counts[v]=(counts[v]||0)+1); const pairs=Object.values(counts).filter(c=>c>=2).length; if(pairs>0){chips+=pairs*2;desc=`+${pairs*2}C pairs`;} } break;
@@ -928,8 +976,8 @@ const CONSUMABLE_DEFS = {
   BOOST_MOD:   { name:'BOOST.MOD',    use: () => { g.baseMult+=0.5; calculateScore(); notify('+0.5x MULT','good'); } },
   DICE_SWAP:   { name:'DICE_SWAP',    use: () => { g.dice.forEach(d=>{d.held=false;}); runRoll(true); notify('ALL DICE REROLLED','info'); } },
   DUPE_CHIP:   { name:'DUPE_CHIP',    use: () => { g.baseChips+=10; calculateScore(); notify('+10 CHIPS','good'); } },
-  CREDIT_HACK: { name:'CREDIT_HACK',  use: () => { g.bank+=15; updateUI(); notify('+$15 CREDITS','gold'); } },
-  LVLUP_HAND:  { name:'LEVELUP.EXE',  use: () => { const {key}=getHandInfo(); g.handLevels[key]=(g.handLevels[key]||1)+1; calculateScore(); notify(`${HANDS[key]?.n||key} LV UP!`,'gold'); } },
+  CREDIT_HACK: { name:'CREDIT_HACK',  use: () => { g.bank+=8; updateUI(); notify('+$8 CREDITS','gold'); } },
+  LVLUP_HAND:  { name:'LEVELUP.EXE',  use: () => { const {key}=getHandInfo(); g.handLevels[key]=(g.handLevels[key]||1)+1; calculateScore(); notify(`${getHandDef(key)?.n||key} LV UP!`,'gold'); } },
   HOLD_ALL:    { name:'HOLD_ALL',     use: () => { g.dice.forEach(d=>{if(d.v!==null)d.held=true;}); initBoard(); notify('ALL DICE HELD','good'); } },
   REVEAL_EXE:  { name:'REVEAL.EXE',   use: () => { const s=calculateScore(); notify(`PROJECTED SCORE: ${s}`,'info'); } },
   REORDER_SYS: { name:'REORDER.SYS',  use: () => { const vals=g.dice.filter(d=>d.v!==null).map(d=>d.v).sort((a,b)=>a-b); let i=0; g.dice.forEach(d=>{if(d.v!==null)d.v=vals[i++];}); initBoard(); notify('DICE SORTED','info'); } },
@@ -1003,20 +1051,22 @@ function enterShop() {
     return;
   }
 
-  // Earn round reward
-  const reward = ANTE_TABLE[g.ante-1]?.[1] || 5;
+  // Earn reward based on score — $1 per 10 points scored, minimum 3, maximum 15
+  const reward = Math.max(3, Math.min(15, Math.floor(score / 10)));
   g.bank += reward;
-  notify(`+$${reward} ROUND BONUS`, 'gold');
+  notify(`+$${reward} FROM SCORE (${score} pts)`, 'gold');
 
   // Reset for shop
   g.shopRerollCost = 5;
   shopRerollCount = 0;
   currentShopTab = 'jokers';
+  currentShopItems = {};
 
   document.getElementById('shop-bank-ui').innerText = g.bank;
   document.getElementById('screen-shop').classList.remove('hidden');
   document.querySelectorAll('.shop-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'jokers'));
   genShopForTab('jokers');
+  renderShopContent();
 }
 
 function switchTab(tab) {
@@ -1150,7 +1200,7 @@ const SHOP_CATALOG = [
   { tab:'consumables', rarity:'common',   name:'HOLD_ALL',     id:'HOLD_ALL',    cost:4,  desc:'Hold all dice simultaneously.',                         f:()=>addConsumable('HOLD_ALL') },
   { tab:'consumables', rarity:'common',   name:'REVEAL.EXE',   id:'REVEAL_EXE',  cost:3,  desc:'Show what score you\'d get before UPLINKing.',          f:()=>addConsumable('REVEAL_EXE') },
   { tab:'consumables', rarity:'uncommon', name:'BOOST.MOD',    id:'BOOST_MOD',   cost:5,  desc:'+0.5x base mult this round.',                           f:()=>addConsumable('BOOST_MOD') },
-  { tab:'consumables', rarity:'uncommon', name:'CREDIT_HACK',  id:'CREDIT_HACK', cost:2,  desc:'Steal $15 credits from the system.',                    f:()=>addConsumable('CREDIT_HACK') },
+  { tab:'consumables', rarity:'uncommon', name:'CREDIT_HACK',  id:'CREDIT_HACK', cost:3,  desc:'Steal $8 credits from the system.',                    f:()=>addConsumable('CREDIT_HACK') },
   { tab:'consumables', rarity:'uncommon', name:'REORDER.SYS',  id:'REORDER_SYS', cost:5,  desc:'Sort all dice values in ascending order.',              f:()=>addConsumable('REORDER_SYS') },
   { tab:'consumables', rarity:'uncommon', name:'MAGNET.EXE',   id:'MAGNET_EXE',  cost:5,  desc:'Set all dice to their maximum face value.',             f:()=>addConsumable('MAGNET_EXE') },
   { tab:'consumables', rarity:'rare',     name:'LEVELUP.EXE',  id:'LVLUP_HAND',  cost:8,  desc:'Level up the current best hand type permanently.',      f:()=>addConsumable('LVLUP_HAND') },
@@ -1165,7 +1215,7 @@ const SHOP_CATALOG = [
   { tab:'upgrades', rarity:'common',   name:'CHIPS +10',       cost:9,  desc:'Permanently increases base chips by 10.',            effect:'Base Chips +10',    f:()=>{ g.baseChips += 10; notify('BASE CHIPS +10','good'); } },
   { tab:'upgrades', rarity:'common',   name:'CHIPS +20',       cost:15, desc:'Permanently increases base chips by 20.',            effect:'Base Chips +20',    f:()=>{ g.baseChips += 20; notify('BASE CHIPS +20','good'); } },
   { tab:'upgrades', rarity:'uncommon', name:'REROLL+ UPGRADE', cost:8,  desc:'Gain +1 max reroll per round permanently.',          effect:'Max Rerolls +1',    f:()=>{ g.maxRerolls++; g.rerolls = g.maxRerolls; notify('MAX REROLLS +1','good'); } },
-  { tab:'upgrades', rarity:'uncommon', name:'INTEREST.SYS',    cost:10, desc:'Earn $1 for every $5 in the bank at round end.',     effect:'5% interest/round', f:()=>{ g.hasInterest = true; notify('INTEREST ENABLED','gold'); } },
+  { tab:'upgrades', rarity:'uncommon', name:'INTEREST.SYS',    cost:10, desc:'At round start, earn $1 per $5 in your bank.',       effect:'+20% interest/round', f:()=>{ g.hasInterest = true; notify('INTEREST ENABLED','gold'); } },
   { tab:'upgrades', rarity:'uncommon', name:'STARTING BONUS',  cost:9,  desc:'Begin each round with +8 bonus chips pre-loaded.',   effect:'+8 chips on start', f:()=>{ g.startingChips = (g.startingChips||0)+8; notify('+8 STARTING CHIPS','good'); } },
   { tab:'upgrades', rarity:'rare',     name:'LVLUP PAIR',      cost:12, desc:'Level up PAIR hand.',                                effect:'Pair LV+1',         f:()=>{ g.handLevels['PAIR']=(g.handLevels['PAIR']||1)+1; notify('PAIR LV UP!','gold'); } },
   { tab:'upgrades', rarity:'rare',     name:'LVLUP THREE OAK', cost:13, desc:'Level up THREE OF A KIND hand.',                    effect:'Three OAK LV+1',    f:()=>{ g.handLevels['THREE_OF_A_KIND']=(g.handLevels['THREE_OF_A_KIND']||1)+1; notify('3OAK LV UP!','gold'); } },
@@ -1174,7 +1224,7 @@ const SHOP_CATALOG = [
   { tab:'upgrades', rarity:'rare',     name:'LVLUP FOUR OAK',  cost:16, desc:'Level up FOUR OF A KIND hand.',                     effect:'Four OAK LV+1',     f:()=>{ g.handLevels['FOUR_OF_A_KIND']=(g.handLevels['FOUR_OF_A_KIND']||1)+1; notify('4OAK LV UP!','gold'); } },
   { tab:'upgrades', rarity:'rare',     name:'MULT +1.0',       cost:18, desc:'Permanently increases base multiplier by 1.0.',      effect:'Base Mult +1.0',    f:()=>{ g.baseMult += 1.0; notify('BASE MULT +1.0!','gold'); } },
   { tab:'upgrades', rarity:'legendary',name:'OVERCLOCK CORE',  cost:20, desc:'Permanently doubles base mult and halves base chips. High risk, high reward.', effect:'Mult x2, Chips /2', f:()=>{ g.baseMult *= 2; g.baseChips = Math.floor(g.baseChips/2); notify('OVERCLOCK CORE INSTALLED!','gold'); } },
-  { tab:'upgrades', rarity:'legendary',name:'INTEREST PRIME',  cost:22, desc:'Earn $1 for every $3 banked at round end.',         effect:'33% interest/round', f:()=>{ g.hasInterestPrime = true; notify('PRIME INTEREST ENABLED','gold'); } },
+  { tab:'upgrades', rarity:'legendary',name:'INTEREST PRIME',  cost:22, desc:'At round start, earn $1 per $3 in your bank.',       effect:'+33% interest/round', f:()=>{ g.hasInterestPrime = true; notify('PRIME INTEREST ENABLED','gold'); } },
 
   // ── DICE MODS ──
   { tab:'dice', rarity:'common',    name:'STONE DIE (D6)',    cost:5,  desc:'Add a standard stone D6.',                                                    effect:'+1 D6 · STONE',       f:()=>{ g.dice.push(makeDie([1,2,3,4,5,6],'stone')); initBoard(); notify('+1 STONE D6','info'); } },

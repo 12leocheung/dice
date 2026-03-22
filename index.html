@@ -1,308 +1,1365 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DICE-LATRO: UNLIMITED_EDITION</title>
-    <style>
-        :root {
-            --neon-green: #39ff14;
-            --dark-green: #0a2f05;
-            --neon-bg: #020501;
-            --firewall-bg: #051a05;
-            --glow: 0 0 12px rgba(57, 255, 20, 0.7);
-            --heavy-glow: 0 0 25px rgba(57, 255, 20, 0.9);
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DICE-LATRO: UNLIMITED_EDITION</title>
+<style>
+:root {
+  --ng: #39ff14;
+  --ng2: #00ff88;
+  --ng3: #b0ff50;
+  --dg: #071a03;
+  --bg: #030804;
+  --card: #061203;
+  --glow: 0 0 10px rgba(57,255,20,0.6);
+  --glow2: 0 0 22px rgba(57,255,20,0.85);
+  --glow3: 0 0 40px rgba(57,255,20,0.5);
+  --red: #ff3a3a;
+  --gold: #ffd700;
+  --blue: #00b8ff;
+  --purple: #bf5fff;
+}
 
-        @keyframes globalGlitch {
-            0% { transform: translate(0); }
-            2% { transform: translate(-7px, 3px) skewX(15deg); filter: brightness(2); }
-            4% { transform: translate(7px, -3px) skewX(-15deg); }
-            6% { transform: translate(0); filter: brightness(1); }
-            100% { transform: translate(0); }
-        }
+*, *::before, *::after { box-sizing: border-box; }
 
-        .glitching { animation: globalGlitch 0.4s step-end infinite; }
+@font-face {
+  font-family: 'Share Tech Mono';
+  src: url('https://fonts.gstatic.com/s/sharetechmono/v15/J7aHnp1uDWRBEqV98dVQztYldFc7pAsEIc3Xew.woff2') format('woff2');
+}
 
-        body {
-            background-color: var(--neon-bg); color: var(--neon-green);
-            font-family: 'Courier New', Courier, monospace;
-            display: flex; justify-content: center; align-items: center;
-            height: 100vh; margin: 0; text-transform: uppercase; overflow: hidden;
-            text-shadow: var(--glow);
-        }
+body {
+  background: var(--bg);
+  color: var(--ng);
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh; margin: 0;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-shadow: var(--glow);
+  user-select: none;
+}
 
-        #game-container {
-            width: 900px; height: 780px; background: var(--neon-bg);
-            border: 4px solid var(--neon-green); padding: 25px; position: relative;
-            box-shadow: var(--heavy-glow); display: flex; flex-direction: column;
-        }
+/* ── CRT OVERLAY ── */
+#crt-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+}
+#crt-overlay::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0,0,0,0.18) 3px,
+    rgba(0,0,0,0.18) 4px
+  );
+  animation: scanroll 8s linear infinite;
+}
+#crt-overlay::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.75) 100%);
+  pointer-events: none;
+}
+/* CRT curved corner blackout — sits over the game container edges */
+#crt-corners {
+  position: absolute; inset: -3px; border-radius: 28px;
+  pointer-events: none; z-index: 6;
+  box-shadow: 0 0 0 6px var(--bg), inset 0 0 0 0 transparent;
+}
+/* Strong curved screen-edge darkening */
+#crt-corners::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: 26px;
+  background: radial-gradient(ellipse at 50% 50%, transparent 70%, rgba(0,0,0,0.6) 90%, rgba(0,0,0,0.95) 100%);
+  pointer-events: none;
+}
+@keyframes scanroll { from { background-position: 0 0; } to { background-position: 0 400px; } }
 
-        .header { display: flex; justify-content: space-between; border-bottom: 2px solid var(--neon-green); padding-bottom: 15px; }
-        .money-terminal { border: 3px solid var(--neon-green); padding: 10px 25px; background: var(--dark-green); box-shadow: var(--heavy-glow); text-align: right; }
-        .money-value { font-size: 2.8rem; font-weight: 900; }
+/* phosphor flicker */
+@keyframes phFlicker {
+  0%,100%{opacity:1} 92%{opacity:1} 93%{opacity:0.88} 94%{opacity:1} 96%{opacity:0.94} 97%{opacity:1}
+}
+body { animation: phFlicker 6s step-end infinite; }
 
-        .dice-display { display: flex; gap: 15px; justify-content: center; margin: 25px 0; min-height: 85px; }
-        .die {
-            width: 75px; height: 75px; border: 3px solid var(--neon-green);
-            display: flex; justify-content: center; align-items: center;
-            font-size: 32px; font-weight: bold; cursor: pointer;
-            background: rgba(0,0,0,0.8); box-shadow: var(--glow);
-        }
-        .die.blank { border: 2px dashed var(--neon-green); opacity: 0.2; }
-        .die.held { background: var(--neon-green); color: black; transform: translateY(-10px); }
+/* ── SCREENSHAKE ── */
+@keyframes shake-sm { 0%,100%{transform:translate(0)} 20%{transform:translate(-4px,2px)} 40%{transform:translate(4px,-3px)} 60%{transform:translate(-2px,4px)} 80%{transform:translate(3px,-1px)} }
+@keyframes shake-lg { 0%,100%{transform:translate(0)} 15%{transform:translate(-10px,5px) rotate(-0.5deg)} 30%{transform:translate(10px,-6px) rotate(0.5deg)} 50%{transform:translate(-8px,8px)} 70%{transform:translate(7px,-4px)} 90%{transform:translate(-3px,3px)} }
+@keyframes shake-xl { 0%,100%{transform:translate(0) rotate(0)} 10%{transform:translate(-14px,7px) rotate(-1deg)} 25%{transform:translate(14px,-8px) rotate(1deg) skewX(2deg)} 40%{transform:translate(-10px,10px)} 60%{transform:translate(12px,-6px) skewX(-1deg)} 80%{transform:translate(-5px,5px)} }
+.shake-sm { animation: shake-sm 0.3s ease-out; }
+.shake-lg { animation: shake-lg 0.45s ease-out; }
+.shake-xl { animation: shake-xl 0.6s ease-out; }
 
-        #consumable-zone {
-            margin: 10px 0; padding: 10px; border: 1px double var(--neon-green);
-            display: flex; align-items: center; gap: 20px; background: rgba(57, 255, 20, 0.05);
-        }
-        .cons-btn { 
-            background: var(--neon-green); color: black; border: none; padding: 5px 15px; 
-            font-weight: bold; cursor: pointer; display: none;
-        }
+/* ── GLITCH ── */
+@keyframes glitch {
+  0%,100%{transform:translate(0);filter:none}
+  20%{transform:translate(-8px,4px) skewX(12deg);filter:hue-rotate(90deg) brightness(2)}
+  40%{transform:translate(8px,-4px) skewX(-8deg);filter:hue-rotate(-90deg)}
+  60%{transform:translate(-3px,6px);filter:brightness(1.5)}
+  80%{transform:translate(4px,-2px)}
+}
+.glitching { animation: glitch 0.35s step-end infinite; }
 
-        #passive-bin { margin-top: auto; border-top: 1px solid var(--neon-green); padding-top: 10px; }
-        #joker-list { display: flex; gap: 8px; height: 80px; align-items: center; overflow-x: auto; }
-        .joker-card { border: 1px solid var(--neon-green); padding: 6px; font-size: 0.55rem; background: var(--dark-green); min-width: 100px; }
+/* ── GAME CONTAINER ── */
+#gc {
+  width: 960px; max-height: 820px;
+  background: var(--bg);
+  border: 3px solid var(--ng);
+  border-radius: 28px;
+  box-shadow: var(--glow2), inset 0 0 40px rgba(57,255,20,0.04), 0 0 80px rgba(57,255,20,0.08);
+  display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+}
 
-        #screen-shop { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--neon-bg); z-index: 50; padding: 25px; overflow-y: auto; }
-        .shop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px;}
-        .shop-card { border: 2px solid var(--neon-green); padding: 12px; text-align: center; cursor: pointer; background: var(--dark-green); }
-        .shop-type { font-size: 0.5rem; color: #fff; background: #333; padding: 2px; margin-bottom: 5px; display: inline-block;}
+/* CRT bezel inner shadow for depth */
+#gc::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 26px;
+  box-shadow: inset 0 0 60px rgba(0,0,0,0.5), inset 0 0 20px rgba(57,255,20,0.06);
+  pointer-events: none; z-index: 5;
+}
 
-        button { background: transparent; color: var(--neon-green); border: 2px solid var(--neon-green); padding: 12px 30px; cursor: pointer; font-weight: bold; font-family: inherit; }
-        button:hover:not(:disabled) { background: var(--neon-green); color: black; }
-        .hidden { display: none; }
-    </style>
+/* ── HEADER ── */
+#hdr {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  border-bottom: 2px solid var(--ng);
+  padding: 12px 20px;
+  background: linear-gradient(180deg, rgba(57,255,20,0.07) 0%, transparent 100%);
+}
+.hdr-left { font-size: 0.75rem; line-height: 2; }
+.hdr-center { text-align: center; }
+.title-main { font-size: 1.3rem; letter-spacing: 4px; color: var(--ng3); text-shadow: var(--glow2); }
+.title-sub { font-size: 0.5rem; letter-spacing: 8px; opacity: 0.6; }
+.money-box {
+  border: 2px solid var(--ng); padding: 8px 18px;
+  background: var(--dg); text-align: right; margin-left: auto;
+  box-shadow: var(--glow); position: relative;
+}
+.money-box::before { content: '💾 CREDITS'; font-size: 0.5rem; display: block; opacity: 0.6; }
+#bank-ui { font-size: 2.2rem; font-weight: 900; }
+
+/* ante bar */
+#ante-bar {
+  background: rgba(57,255,20,0.05); border-bottom: 1px solid rgba(57,255,20,0.3);
+  display: flex; gap: 6px; align-items: center; padding: 6px 20px;
+  font-size: 0.6rem;
+}
+.ante-pip {
+  width: 14px; height: 14px; border: 1px solid var(--ng);
+  background: transparent; transition: background 0.3s;
+}
+.ante-pip.done { background: var(--ng); }
+#score-bar-wrap { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+#score-bar-outer { width: 180px; height: 8px; border: 1px solid var(--ng); background: #000; }
+#score-bar-inner { height: 100%; background: var(--ng); width: 0%; transition: width 0.5s ease; box-shadow: var(--glow); }
+
+/* ── MAIN PLAY AREA ── */
+#screen-play { padding: 12px 20px; display: flex; flex-direction: column; gap: 8px; }
+
+/* score display */
+#score-display {
+  text-align: center; padding: 6px 0;
+  display: flex; justify-content: center; align-items: baseline; gap: 10px;
+}
+#score-chips {
+  display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap;
+}
+.chip {
+  padding: 4px 10px; font-size: 0.75rem; font-weight: bold;
+  border: 1px solid; animation: chipIn 0.2s ease-out;
+}
+.chip-blue  { border-color: var(--blue); color: var(--blue); background: rgba(0,184,255,0.1); }
+.chip-red   { border-color: var(--red); color: var(--red); background: rgba(255,58,58,0.1); }
+.chip-gold  { border-color: var(--gold); color: var(--gold); background: rgba(255,215,0,0.1); }
+.chip-green { border-color: var(--ng); color: var(--ng); background: rgba(57,255,20,0.1); }
+@keyframes chipIn { from{transform:scale(0.6) translateY(6px);opacity:0} to{transform:scale(1);opacity:1} }
+
+#hand-name {
+  text-align: center; font-size: 1.6rem; font-weight: 900; min-height: 40px;
+  letter-spacing: 3px; color: var(--ng3); text-shadow: var(--glow2);
+  transition: all 0.2s;
+}
+#score-total {
+  text-align: center; font-size: 3rem; font-weight: 900;
+  line-height: 1; text-shadow: var(--glow2);
+}
+.score-formula { font-size: 0.85rem; opacity: 0.7; letter-spacing: 2px; }
+
+/* ── DICE ── */
+#dice-box {
+  display: flex; gap: 12px; justify-content: center;
+  flex-wrap: wrap; min-height: 90px; align-items: center;
+  padding: 8px 0;
+}
+.die {
+  width: 80px; height: 80px;
+  border: 3px solid var(--ng);
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  cursor: pointer; position: relative; overflow: hidden;
+  background: rgba(0,0,0,0.9);
+  box-shadow: var(--glow);
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.die:hover:not(.blank):not(.rolling) { transform: translateY(-4px) scale(1.05); box-shadow: var(--glow2); }
+.die .die-val { font-size: 2.6rem; font-weight: 900; line-height: 1; }
+.die .die-sides { font-size: 0.38rem; opacity: 0.5; margin-top: 2px; }
+.die.blank { border: 2px dashed rgba(57,255,20,0.2); opacity: 0.25; box-shadow: none; cursor: default; }
+.die.held {
+  background: var(--ng); color: #000;
+  transform: translateY(-10px);
+  box-shadow: var(--glow2), 0 10px 25px rgba(0,0,0,0.5);
+  text-shadow: none;
+}
+.die.held .die-sides { color: rgba(0,0,0,0.5); }
+.die.rolling { animation: dieRoll 0.4s ease-out; border-color: var(--ng3); }
+@keyframes dieRoll {
+  0%{transform:rotate(-15deg) scale(0.8);opacity:0.3}
+  40%{transform:rotate(8deg) scale(1.1);opacity:1}
+  70%{transform:rotate(-4deg) scale(0.97)}
+  100%{transform:rotate(0) scale(1)}
+}
+/* ── MATERIAL STYLES ── */
+/* Gold: warm metallic sheen */
+.mat-gold { border-color: #ffd700 !important; background: linear-gradient(135deg, #1a1200, #2a1f00) !important; box-shadow: 0 0 16px rgba(255,215,0,0.5), inset 0 0 12px rgba(255,215,0,0.08) !important; }
+.mat-gold .die-val { color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.8); }
+.mat-gold .die-label { color: #ffd700; }
+
+/* Fire: burning ember */
+.mat-fire { border-color: #ff4500 !important; background: linear-gradient(135deg, #1a0500, #2a0800) !important; box-shadow: 0 0 16px rgba(255,69,0,0.6), inset 0 0 12px rgba(255,100,0,0.1) !important; animation: fireFlicker 1.5s ease-in-out infinite alternate; }
+.mat-fire .die-val { color: #ff6a00; text-shadow: 0 0 12px rgba(255,100,0,0.9); }
+.mat-fire .die-label { color: #ff4500; }
+@keyframes fireFlicker { 0%{box-shadow:0 0 14px rgba(255,69,0,0.5),inset 0 0 8px rgba(255,100,0,0.1)} 100%{box-shadow:0 0 24px rgba(255,120,0,0.8),inset 0 0 16px rgba(255,150,0,0.15)} }
+
+/* Cursed: sickly purple void */
+.mat-cursed { border-color: #bf5fff !important; background: linear-gradient(135deg, #0d0015, #140020) !important; box-shadow: 0 0 16px rgba(191,95,255,0.5), inset 0 0 12px rgba(191,95,255,0.08) !important; }
+.mat-cursed .die-val { color: #d080ff; text-shadow: 0 0 10px rgba(191,95,255,0.8); }
+.mat-cursed .die-label { color: #bf5fff; }
+
+/* Glass: icy transparent shimmer */
+.mat-glass { border-color: #a8e6ff !important; background: linear-gradient(135deg, rgba(168,230,255,0.05), rgba(200,240,255,0.12)) !important; box-shadow: 0 0 18px rgba(168,230,255,0.4), inset 0 0 20px rgba(255,255,255,0.05) !important; backdrop-filter: blur(2px); }
+.mat-glass .die-val { color: #c8f0ff; text-shadow: 0 0 12px rgba(168,230,255,0.9); }
+.mat-glass .die-label { color: #a8e6ff; }
+.mat-glass.shattered { opacity: 0.2; border-style: dashed !important; filter: grayscale(1); pointer-events: none; }
+
+/* Steel: cold hard chrome */
+.mat-steel { border-color: #8899aa !important; background: linear-gradient(135deg, #0d1015, #151b20) !important; box-shadow: 0 0 10px rgba(136,153,170,0.3), inset 1px 1px 0 rgba(200,220,240,0.1) !important; }
+.mat-steel .die-val { color: #aabbcc; text-shadow: 0 0 6px rgba(136,153,170,0.6); }
+.mat-steel .die-label { color: #8899aa; }
+.mat-steel.held { background: linear-gradient(135deg, #1a2530, #253545) !important; border-color: #aabbcc !important; }
+
+/* Bronze: ancient patina */
+.mat-bronze { border-color: #cd7f32 !important; background: linear-gradient(135deg, #140a00, #1f1000) !important; box-shadow: 0 0 12px rgba(205,127,50,0.4), inset 0 0 10px rgba(205,127,50,0.06) !important; }
+.mat-bronze .die-val { color: #e09040; text-shadow: 0 0 8px rgba(205,127,50,0.7); }
+.mat-bronze .die-label { color: #cd7f32; }
+
+/* Crystal: prismatic rainbow edge */
+.mat-crystal { border-color: #ff80ff !important; background: linear-gradient(135deg, #100010, #001010) !important; box-shadow: 0 0 20px rgba(255,128,255,0.4), 0 0 8px rgba(0,255,200,0.3), inset 0 0 14px rgba(255,255,255,0.04) !important; animation: crystalShift 3s linear infinite; }
+.mat-crystal .die-val { color: #ff99ff; text-shadow: 0 0 10px rgba(255,128,255,0.8); }
+.mat-crystal .die-label { color: #ff80ff; }
+@keyframes crystalShift { 0%{border-color:#ff80ff} 33%{border-color:#80ffff} 66%{border-color:#ffff80} 100%{border-color:#ff80ff} }
+
+/* Obsidian: deep void black with magma cracks */
+.mat-obsidian { border-color: #444 !important; background: linear-gradient(135deg, #050505, #0a0808) !important; box-shadow: 0 0 8px rgba(255,50,0,0.3), inset 0 0 20px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,80,0,0.2) !important; }
+.mat-obsidian .die-val { color: #ff6633; text-shadow: 0 0 8px rgba(255,80,0,0.7); }
+.mat-obsidian .die-label { color: #662211; }
+
+/* Wooden: warm organic grain */
+.mat-wooden { border-color: #8b5e3c !important; background: linear-gradient(135deg, #120800, #1a0f05) !important; box-shadow: 0 0 8px rgba(139,94,60,0.4), inset 0 0 8px rgba(139,94,60,0.08) !important; }
+.mat-wooden .die-val { color: #c8854a; text-shadow: 0 0 6px rgba(139,94,60,0.5); }
+.mat-wooden .die-label { color: #8b5e3c; }
+
+/* die-label: material tag shown below value */
+.die-label { font-size: 0.36rem; letter-spacing: 1px; margin-top: 1px; opacity: 0.8; font-weight: bold; }
+
+/* held indicator */
+.die.held::after { content: 'HELD'; position: absolute; top: 2px; right: 3px; font-size: 0.38rem; color: rgba(0,0,0,0.6); }
+
+/* ── SCORE POPUP ── */
+.score-pop {
+  position: absolute; font-size: 1.4rem; font-weight: 900;
+  pointer-events: none; z-index: 100;
+  animation: popUp 1s ease-out forwards;
+  text-shadow: var(--glow2);
+}
+@keyframes popUp { 0%{transform:translateY(0) scale(1);opacity:1} 100%{transform:translateY(-80px) scale(1.4);opacity:0} }
+
+/* ── CONSUMABLE ZONE ── */
+#consumable-zone {
+  border: 1px solid rgba(57,255,20,0.4); padding: 8px 14px;
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(57,255,20,0.03); font-size: 0.65rem;
+  min-height: 44px;
+}
+.cons-label { opacity: 0.5; white-space: nowrap; }
+#cons-slot {
+  display: flex; align-items: center; gap: 8px; flex: 1;
+}
+.cons-card {
+  border: 1px solid var(--ng3); padding: 4px 10px;
+  background: rgba(0,255,136,0.08); color: var(--ng3);
+  font-size: 0.65rem; font-weight: bold;
+  cursor: pointer; transition: all 0.15s;
+}
+.cons-card:hover { background: rgba(0,255,136,0.2); }
+#cons-desc { font-size: 0.55rem; opacity: 0.6; flex: 1; }
+
+/* ── CONTROLS ── */
+.controls {
+  display: flex; justify-content: center; gap: 20px; align-items: center;
+  padding: 4px 0;
+}
+.ctrl-stat { font-size: 0.75rem; text-align: center; line-height: 1.5; }
+.ctrl-stat span { display: block; font-size: 1.2rem; font-weight: 900; }
+
+button {
+  background: transparent; color: var(--ng);
+  border: 2px solid var(--ng);
+  padding: 10px 24px; cursor: pointer;
+  font-weight: bold; font-family: inherit;
+  font-size: 0.8rem; letter-spacing: 2px;
+  position: relative; overflow: hidden;
+  transition: all 0.15s; text-transform: uppercase;
+}
+button::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--ng); transform: translateX(-101%);
+  transition: transform 0.15s ease-out;
+}
+button:hover:not(:disabled)::before { transform: translateX(0); }
+button:hover:not(:disabled) { color: #000; text-shadow: none; }
+button:disabled { opacity: 0.25; cursor: default; border-style: dashed; }
+button span { position: relative; z-index: 1; }
+button.btn-red { border-color: var(--red); color: var(--red); }
+button.btn-red::before { background: var(--red); }
+button.btn-gold { border-color: var(--gold); color: var(--gold); }
+button.btn-gold::before { background: var(--gold); }
+button.btn-big { padding: 14px 36px; font-size: 1rem; border-width: 3px; }
+
+/* ── JOKER TRAY ── */
+#passive-bin {
+  border-top: 1px solid rgba(57,255,20,0.3);
+  padding: 8px 20px 10px;
+  background: rgba(57,255,20,0.02);
+}
+.tray-label { font-size: 0.5rem; opacity: 0.5; margin-bottom: 6px; letter-spacing: 3px; }
+#joker-list { display: flex; gap: 8px; flex-wrap: wrap; min-height: 64px; align-items: center; }
+.joker-card {
+  border: 1px solid; padding: 5px 9px;
+  font-size: 0.52rem; line-height: 1.5;
+  position: relative; cursor: help;
+  transition: transform 0.1s;
+  min-width: 90px; max-width: 120px;
+}
+.joker-card:hover { transform: translateY(-4px); z-index: 10; }
+.joker-card .jname { font-size: 0.65rem; font-weight: bold; display: block; }
+.joker-rarity-common   { border-color: var(--ng); color: var(--ng); background: rgba(57,255,20,0.06); }
+.joker-rarity-uncommon { border-color: var(--blue); color: var(--blue); background: rgba(0,184,255,0.06); }
+.joker-rarity-rare     { border-color: var(--gold); color: var(--gold); background: rgba(255,215,0,0.06); }
+.joker-rarity-legendary{ border-color: var(--purple); color: var(--purple); background: rgba(191,95,255,0.06); }
+
+/* ── SHOP SCREEN ── */
+#screen-shop {
+  position: absolute; inset: 0;
+  background: var(--bg); z-index: 50;
+  display: flex; flex-direction: column;
+  padding: 0; overflow: hidden;
+}
+.shop-hdr {
+  border-bottom: 2px solid var(--ng);
+  padding: 12px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(180deg, rgba(57,255,20,0.08) 0%, transparent 100%);
+}
+.shop-hdr h2 { font-size: 1.6rem; letter-spacing: 4px; margin: 0; }
+#shop-tabs {
+  display: flex; gap: 0; border-bottom: 1px solid rgba(57,255,20,0.3);
+}
+.shop-tab {
+  padding: 8px 20px; font-size: 0.65rem; letter-spacing: 2px;
+  border-bottom: 2px solid transparent; cursor: pointer;
+  transition: all 0.15s; color: rgba(57,255,20,0.5);
+}
+.shop-tab.active { color: var(--ng); border-bottom-color: var(--ng); background: rgba(57,255,20,0.05); }
+.shop-tab:hover:not(.active) { color: var(--ng3); }
+#shop-content { flex: 1; overflow-y: auto; padding: 16px 20px; }
+.shop-section-title { font-size: 0.6rem; opacity: 0.5; letter-spacing: 3px; margin-bottom: 10px; border-bottom: 1px solid rgba(57,255,20,0.2); padding-bottom: 4px; }
+.shop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+
+.shop-card {
+  border: 2px solid; padding: 12px;
+  background: var(--card); cursor: pointer;
+  transition: all 0.15s; position: relative;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.shop-card:hover:not(.sold):not(.cant-afford) { transform: translateY(-3px); }
+.shop-card.sold { opacity: 0.25; pointer-events: none; }
+.shop-card.cant-afford { opacity: 0.4; cursor: not-allowed; }
+.shop-card .stype {
+  font-size: 0.42rem; padding: 2px 6px; display: inline-block;
+  margin-bottom: 4px; font-weight: bold; letter-spacing: 1px;
+  align-self: flex-start;
+}
+.shop-card .sname { font-size: 0.9rem; font-weight: bold; line-height: 1.2; }
+.shop-card .sdesc { font-size: 0.52rem; opacity: 0.7; line-height: 1.5; flex: 1; }
+.shop-card .sprice { font-size: 1.1rem; font-weight: 900; margin-top: 6px; }
+.shop-card .seffect { font-size: 0.5rem; opacity: 0.5; margin-top: 2px; }
+
+/* rarity borders */
+.sc-common   { border-color: rgba(57,255,20,0.6); }
+.sc-uncommon { border-color: rgba(0,184,255,0.6); }
+.sc-rare     { border-color: rgba(255,215,0,0.7); box-shadow: 0 0 10px rgba(255,215,0,0.15); }
+.sc-legendary{ border-color: rgba(191,95,255,0.7); box-shadow: 0 0 14px rgba(191,95,255,0.2); }
+
+.sc-common .stype   { background: rgba(57,255,20,0.15); color: var(--ng); }
+.sc-uncommon .stype { background: rgba(0,184,255,0.15); color: var(--blue); }
+.sc-rare .stype     { background: rgba(255,215,0,0.15); color: var(--gold); }
+.sc-legendary .stype{ background: rgba(191,95,255,0.15); color: var(--purple); }
+
+.sc-common .sprice   { color: var(--ng); }
+.sc-uncommon .sprice { color: var(--blue); }
+.sc-rare .sprice     { color: var(--gold); }
+.sc-legendary .sprice{ color: var(--purple); }
+
+.shop-footer {
+  border-top: 1px solid rgba(57,255,20,0.3); padding: 12px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.shop-reroll-cost { font-size: 0.6rem; }
+
+/* ── GAME OVER ── */
+#screen-over {
+  position: absolute; inset: 0;
+  background: rgba(3,8,4,0.97); z-index: 80;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center; gap: 20px;
+  text-align: center;
+}
+.go-title { font-size: 5rem; font-weight: 900; color: var(--red); text-shadow: 0 0 30px rgba(255,58,58,0.7); letter-spacing: 6px; animation: glitch 0.4s step-end infinite; }
+.go-stats { font-size: 0.75rem; line-height: 2.5; opacity: 0.7; }
+
+/* ── WIN SCREEN ── */
+#screen-win {
+  position: absolute; inset: 0;
+  background: rgba(3,8,4,0.97); z-index: 80;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center; gap: 20px;
+  text-align: center;
+}
+.win-title { font-size: 4rem; font-weight: 900; color: var(--gold); text-shadow: 0 0 30px rgba(255,215,0,0.7); letter-spacing: 4px; }
+
+/* ── NOTIFICATION ── */
+#notif {
+  position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+  z-index: 200; pointer-events: none; display: flex; flex-direction: column; gap: 6px; align-items: center;
+}
+.notif-msg {
+  padding: 7px 18px; font-size: 0.7rem; font-weight: bold;
+  border: 1px solid; letter-spacing: 2px;
+  animation: notifAnim 2.5s ease-out forwards;
+}
+.notif-good { border-color: var(--ng); color: var(--ng); background: rgba(57,255,20,0.12); }
+.notif-bad  { border-color: var(--red); color: var(--red); background: rgba(255,58,58,0.12); }
+.notif-info { border-color: var(--blue); color: var(--blue); background: rgba(0,184,255,0.12); }
+.notif-gold { border-color: var(--gold); color: var(--gold); background: rgba(255,215,0,0.12); }
+@keyframes notifAnim { 0%{opacity:0;transform:translateY(-10px)} 15%{opacity:1;transform:translateY(0)} 75%{opacity:1} 100%{opacity:0;transform:translateY(-20px)} }
+
+/* ── MISC ── */
+.hidden { display: none !important; }
+.sep { border: none; border-top: 1px solid rgba(57,255,20,0.2); margin: 8px 0; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--ng); }
+</style>
 </head>
 <body>
 
-<div id="game-container">
-    <div class="header">
-        <div>
-            <div>CYCLE: <span id="round-ui">1</span></div>
-            <div style="font-size: 1.5rem;">QUOTA: <span id="target-ui">0</span></div>
-        </div>
-        <div class="money-terminal">
-            <span style="font-size: 0.7rem;">SYSTEM_CREDITS</span><br>
-            $<span id="bank-ui" class="money-value">0</span>
-        </div>
+<div id="crt-overlay"></div>
+<div id="notif"></div>
+
+<div id="gc">
+  <div id="crt-corners"></div>
+
+  <!-- HEADER -->
+  <div id="hdr">
+    <div class="hdr-left">
+      CYCLE_<span id="round-ui">1</span> &nbsp;|&nbsp; ANTE_<span id="ante-ui">1</span><br>
+      QUOTA: <strong id="target-ui">–</strong>
+    </div>
+    <div class="hdr-center">
+      <div class="title-main">DICE-LATRO</div>
+      <div class="title-sub">UNLIMITED_EDITION v2.0</div>
+    </div>
+    <div class="money-box" style="text-align:right">
+      $<span id="bank-ui" class="money-value">0</span>
+    </div>
+  </div>
+
+  <!-- ANTE PIPS + SCORE BAR -->
+  <div id="ante-bar">
+    <span style="font-size:0.55rem;opacity:0.5;margin-right:6px">ANTE</span>
+    <div id="ante-pips" style="display:flex;gap:4px"></div>
+    <div id="score-bar-wrap">
+      <span style="font-size:0.55rem;opacity:0.6" id="score-progress-txt">0 / 0</span>
+      <div id="score-bar-outer"><div id="score-bar-inner"></div></div>
+    </div>
+  </div>
+
+  <!-- PLAY SCREEN -->
+  <div id="screen-play">
+
+    <!-- Hand name -->
+    <div id="hand-name">–</div>
+
+    <!-- Score formula chips -->
+    <div id="score-chips"></div>
+
+    <!-- Total score -->
+    <div id="score-total">0</div>
+
+    <!-- Dice -->
+    <div id="dice-box"></div>
+
+    <!-- Consumable zone -->
+    <div id="consumable-zone">
+      <span class="cons-label">CONS_SLOT:</span>
+      <div id="cons-slot">
+        <span id="cons-empty" style="opacity:0.35;font-size:0.6rem">[ EMPTY ]</span>
+      </div>
     </div>
 
-    <div id="screen-play">
-        <div style="text-align: center; font-size: 2.5rem; margin-top: 15px;">
-            <span id="last-sum">0</span> x <span id="mult-ui">1.0</span>
-        </div>
-        <div class="dice-display" id="dice-box"></div>
-        
-        <div id="consumable-zone">
-            <span style="font-size: 0.7rem;">CONS_SLOT:</span>
-            <span id="cons-name" style="font-weight: bold; color: white;">EMPTY</span>
-            <button id="use-cons-btn" class="cons-btn" onclick="useConsumable()">USE_ITEM</button>
-        </div>
-
-        <div class="controls" style="display: flex; justify-content: center; gap: 30px; align-items: center;">
-            <div style="font-size: 0.9rem;">REROLLS: <span id="rerolls-ui">2</span></div>
-            <button id="roll-btn" onclick="runRoll()">EXEC_ROLL</button>
-            <button id="cash-btn" onclick="enterShop()" style="border-style: double;" disabled>UPLINK</button>
-        </div>
-        <p id="hand-msg" style="text-align: center; font-size: 1.4rem; height: 30px; margin: 10px 0;"></p>
+    <!-- Controls -->
+    <div class="controls">
+      <div class="ctrl-stat">REROLLS<span id="rerolls-ui">3</span></div>
+      <button id="roll-btn" onclick="runRoll()"><span>↻ REROLL</span></button>
+      <button id="cash-btn" onclick="enterShop()" class="btn-gold" disabled><span>⬆ UPLINK</span></button>
     </div>
 
-    <div id="passive-bin">
-        <div style="font-size: 0.6rem;">HARDWARE_INVENTORY</div>
-        <div id="joker-list"></div>
-    </div>
+    <hr class="sep">
+  </div>
 
-    <div id="screen-shop" class="hidden">
-        <div class="header" style="border:none">
-            <h2 style="font-size: 1.8rem;">MARKET_UPLINK</h2>
-            <div class="money-terminal" style="transform: scale(0.7);">$<span id="shop-bank-ui" class="money-value">0</span></div>
-        </div>
-        <div class="shop-grid" id="shop-items"></div>
-        <div style="text-align: center; margin-top: 30px;">
-            <button onclick="startNextRound()">NEXT_CYCLE</button>
-        </div>
-    </div>
+  <!-- JOKER TRAY -->
+  <div id="passive-bin">
+    <div class="tray-label">HARDWARE_INVENTORY &nbsp;|&nbsp; JOKERS: <span id="joker-count">0</span>/5</div>
+    <div id="joker-list"></div>
+  </div>
 
-    <div id="screen-over" class="hidden" style="text-align: center; padding-top: 180px;">
-        <h1 style="font-size: 4rem;">CORE_DUMPED</h1>
-        <button onclick="location.reload()">RELOAD</button>
+  <!-- SHOP SCREEN -->
+  <div id="screen-shop" class="hidden">
+    <div class="shop-hdr">
+      <h2>⬡ MARKET_UPLINK</h2>
+      <div class="money-box">$<span id="shop-bank-ui" class="money-value">0</span></div>
     </div>
+    <div id="shop-tabs">
+      <div class="shop-tab active" data-tab="jokers" onclick="switchTab('jokers')">JOKERS</div>
+      <div class="shop-tab" data-tab="consumables" onclick="switchTab('consumables')">CONSUMABLES</div>
+      <div class="shop-tab" data-tab="upgrades" onclick="switchTab('upgrades')">UPGRADES</div>
+      <div class="shop-tab" data-tab="dice" onclick="switchTab('dice')">DICE_MODS</div>
+    </div>
+    <div id="shop-content"></div>
+    <div class="shop-footer">
+      <div class="shop-reroll-cost">REROLL SHOP: $<span id="reroll-cost-ui">5</span></div>
+      <button onclick="rerollShop()" class="btn-red"><span>↻ REROLL_SHOP</span></button>
+      <button onclick="startNextRound()" class="btn-big"><span>▶▶ NEXT_CYCLE</span></button>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="screen-over" class="hidden">
+    <div class="go-title">CORE_DUMPED</div>
+    <div class="go-stats" id="go-stats"></div>
+    <button onclick="location.reload()" class="btn-red btn-big"><span>↺ RELOAD_SYS</span></button>
+  </div>
+
+  <!-- WIN -->
+  <div id="screen-win" class="hidden">
+    <div class="win-title">⬡ SYSTEM_CLEARED ⬡</div>
+    <div class="go-stats" id="win-stats"></div>
+    <button onclick="location.reload()" class="btn-gold btn-big"><span>↺ NEW_GAME</span></button>
+  </div>
 </div>
 
 <script>
-    let g = {
-        round: 1, target: 0, bank: 0, 
-        baseMult: 1.0, rerolls: 2, maxRerolls: 2,
-        dice: Array(4).fill(null).map(() => ({ v: null, held: false, sides: [1,2,3,4,5,6] })),
-        passives: [],
-        consumable: null,
-        firstRollDone: false,
-        extraScore: 0
+// ══════════════════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════════════════
+let g = {
+  ante: 1, round: 1, rerolls: 3, maxRerolls: 3,
+  bank: 4, target: 300, runScore: 0,
+  baseMult: 1.0, baseChips: 0,
+  dice: [],
+  jokers: [], consumables: [],
+  firstRollDone: false, glassRerolled: false,
+  roundScore: 0, shopRerollCost: 5,
+  handsPlayed: 0, totalScore: 0,
+  handLevels: { 'PAIR':1, 'TWO_PAIR':1, 'THREE_OF_A_KIND':1, 'STRAIGHT':1, 'FULL_HOUSE':1, 'FOUR_OF_A_KIND':1, 'FIVE_OF_A_KIND':1, 'HIGH_CARD':1 }
+};
+
+// ANTE structure: [target, reward]
+const ANTE_TABLE = [
+  [30, 3], [60, 4], [100, 5], [160, 5], [250, 6], [400, 7], [650, 8]
+];
+const MAX_ANTE = ANTE_TABLE.length;
+
+// HAND DEFINITIONS: [baseChips, baseMult, name, label]
+const HANDS = {
+  HIGH_CARD:       { c:2,  m:1,   n:'HIGH CARD',       label:'single high' },
+  PAIR:            { c:4,  m:1.5, n:'PAIR',             label:'two matching' },
+  TWO_PAIR:        { c:8,  m:2,   n:'TWO PAIR',         label:'two pairs' },
+  THREE_OF_A_KIND: { c:12, m:2.5, n:'THREE OF A KIND',  label:'three matching' },
+  STRAIGHT:        { c:15, m:3,   n:'STRAIGHT',         label:'sequential run' },
+  FULL_HOUSE:      { c:18, m:3.5, n:'FULL HOUSE',       label:'three + two' },
+  FOUR_OF_A_KIND:  { c:25, m:5,   n:'FOUR OF A KIND',   label:'four matching' },
+  FIVE_OF_A_KIND:  { c:35, m:7,   n:'FIVE OF A KIND',   label:'five matching' },
+  STRAIGHT_FLUSH:  { c:45, m:10,  n:'SPECTRAL STRAIGHT',label:'straight + flush' },
+};
+
+function initGame() {
+  g.dice = [
+    makeDie([1,2,3,4,5,6], 'stone'),
+    makeDie([1,2,3,4,5,6], 'stone'),
+    makeDie([1,2,3,4,5,6], 'stone'),
+    makeDie([1,2,3,4,5,6], 'stone'),
+    makeDie([1,2,3,4,5,6], 'stone'),
+  ];
+  g.target = ANTE_TABLE[g.ante-1][0];
+  updateUI(); initBoard();
+  buildAntePips();
+}
+
+function makeDie(sides, material='stone') {
+  return { v: null, held: false, sides, material, woodenBonus: 0, shattered: false };
+}
+
+// ══════════════════════════════════════════════════════
+//  MATERIAL DEFINITIONS
+// ══════════════════════════════════════════════════════
+const MATERIALS = {
+  stone:   { name:'STONE',    label:'STN', desc:'Standard die. No special effect.',                           color:'#39ff14' },
+  gold:    { name:'GOLD',     label:'GLD', desc:'+3 chips flat whenever this die is rolled.',                 color:'#ffd700' },
+  fire:    { name:'FIRE',     label:'FIR', desc:'+1.5 Mult if this die rolls its maximum face.',              color:'#ff6a00' },
+  cursed:  { name:'CURSED',   label:'CRS', desc:'+8 chips if this die rolls a 1.',                           color:'#d080ff' },
+  glass:   { name:'GLASS',    label:'GLS', desc:'x2 score if not rerolled this round. Shatters if rerolled.', color:'#c8f0ff' },
+  steel:   { name:'STEEL',    label:'STL', desc:'+1.5 Mult for each steel die you hold.',                    color:'#aabbcc' },
+  bronze:  { name:'BRONZE',   label:'BRZ', desc:'Acts as a wild — counts as any value for hand detection.',   color:'#e09040' },
+  crystal: { name:'CRYSTAL',  label:'CRY', desc:'Its pip value counts twice toward chips.',                   color:'#ff99ff' },
+  obsidian:{ name:'OBSIDIAN', label:'OBS', desc:'+0.3 Mult per die in your pool (scales with pool size).',   color:'#ff6633' },
+  wooden:  { name:'WOODEN',   label:'WOD', desc:'Gains +1 to max face permanently each round.',              color:'#c8854a' },
+};
+
+// ══════════════════════════════════════════════════════
+//  DICE BOARD
+// ══════════════════════════════════════════════════════
+function initBoard() {
+  const box = document.getElementById('dice-box');
+  box.innerHTML = '';
+  g.dice.forEach((d, i) => {
+    const div = document.createElement('div');
+    const mat = d.material || 'stone';
+    const matDef = MATERIALS[mat] || MATERIALS.stone;
+    const isBlank = d.v === null;
+    const isShattered = d.shattered;
+    div.className = [
+      'die',
+      isBlank ? 'blank' : '',
+      d.held ? 'held' : '',
+      `mat-${mat}`,
+      isShattered ? 'shattered' : '',
+    ].filter(Boolean).join(' ');
+
+    // Tooltip
+    div.title = `${matDef.name}: ${matDef.desc}`;
+
+    const sideRange = d.sides[0] + '–' + d.sides[d.sides.length - 1];
+    div.innerHTML = `
+      <span class="die-val">${isBlank ? '' : d.v}</span>
+      <span class="die-label">${matDef.label} · ${sideRange}</span>
+    `;
+
+    div.onclick = () => {
+      if(isShattered) return;
+      if(g.firstRollDone && d.v !== null) {
+        d.held = !d.held;
+        initBoard();
+        calculateScore();
+      }
     };
+    box.appendChild(div);
+  });
+  calculateScore();
+  updateCons();
+}
 
-    // --- ACCESSIBLE QUOTAS ---
-    const targets = [0, 0, 0, 25, 50, 100, 250, 500, 1000, 2500];
+function runRoll(free=false) {
+  if (g.rerolls <= 0 && g.firstRollDone && !free) return;
+  if (!g.firstRollDone) {
+    g.firstRollDone = true;
+    document.getElementById('cash-btn').disabled = false;
+  } else if (!free) {
+    g.rerolls--;
+    g.glassRerolled = true;
+  }
 
-    setInterval(() => {
-        const container = document.getElementById('game-container');
-        if (Math.random() > 0.92) {
-            container.classList.add('glitching');
-            setTimeout(() => container.classList.remove('glitching'), 250);
-        }
-    }, 3000);
+  const box = document.getElementById('dice-box');
+  const divs = box.querySelectorAll('.die');
 
-    function initBoard() {
-        const box = document.getElementById('dice-box');
-        box.innerHTML = '';
-        g.dice.forEach((d) => {
-            let div = document.createElement('div');
-            div.className = `die ${d.v === null ? 'blank' : ''} ${d.held ? 'held' : ''}`;
-            div.innerText = d.v === null ? '' : d.v;
-            div.onclick = () => { if(g.firstRollDone) { d.held = !d.held; initBoard(); } };
-            box.appendChild(div);
-        });
-        calculatePotential();
+  g.dice.forEach((d, i) => {
+    if (!d.held) {
+      // Glass die shatters on reroll (after first roll)
+      if (d.material === 'glass' && g.firstRollDone && !free && !g.glassShatterProof) {
+        d.shattered = true;
+        d.v = null;
+        notify('GLASS DIE SHATTERED!', 'bad');
+        return;
+      }
+      d.v = d.sides[Math.floor(Math.random()*d.sides.length)];
+      divs[i]?.classList.add('rolling');
+      setTimeout(() => divs[i]?.classList.remove('rolling'), 450);
     }
+  });
 
-    function runRoll() {
-        if (g.rerolls <= 0 && g.firstRollDone) return;
-        if (g.firstRollDone) g.rerolls--;
-        g.firstRollDone = true;
-        document.getElementById('cash-btn').disabled = false;
-        if(g.consumable) document.getElementById('use-cons-btn').style.display = 'block';
-        
-        g.dice.forEach(d => { if (!d.held) d.v = d.sides[Math.floor(Math.random() * d.sides.length)]; });
-        document.getElementById('rerolls-ui').innerText = g.rerolls;
-        if(g.rerolls <= 0) document.getElementById('roll-btn').disabled = true;
-        initBoard();
+  // JOKER triggers on roll
+  triggerJokerEvent('onRoll');
+
+  shake('sm');
+  document.getElementById('rerolls-ui').innerText = g.rerolls;
+  if(g.rerolls <= 0) document.getElementById('roll-btn').disabled = true;
+  setTimeout(() => { initBoard(); }, 80);
+}
+
+
+
+function gameOver() {
+  shake('xl');
+  document.getElementById('screen-over').classList.remove('hidden');
+  document.getElementById('go-stats').innerHTML =
+    `ANTE: ${g.ante} &nbsp;|&nbsp; CYCLE: ${g.round}<br>FINAL SCORE: ${g.totalScore}<br>JOKERS ACQUIRED: ${g.jokers.length}`;
+}
+
+// ══════════════════════════════════════════════════════
+//  SCORING
+// ══════════════════════════════════════════════════════
+function getHandInfo() {
+  // Separate bronze (wild) dice from normal dice
+  const bronzeDice = g.dice.filter(d => d.material === 'bronze' && d.v !== null && !d.shattered);
+  const normalDice = g.dice.filter(d => d.material !== 'bronze' && d.v !== null && !d.shattered);
+  const vals = normalDice.map(d=>d.v).sort((a,b)=>a-b);
+  const wildCount = bronzeDice.length;
+
+  if(!vals.length && !wildCount) return { key:'HIGH_CARD', handName:'–', chips:0, mult:0, vals:[] };
+
+  let counts={};
+  vals.forEach(v => counts[v]=(counts[v]||0)+1);
+  const cArr = Object.values(counts).sort((a,b)=>b-a);
+  // Add wilds to top group
+  if(wildCount > 0 && cArr.length > 0) cArr[0] += wildCount;
+  else if(wildCount > 0) cArr.push(wildCount);
+  const uniq = [...new Set(vals)];
+  const totalDice = vals.length + wildCount;
+  const isStraight = uniq.length >= 4 && uniq.every((v,i)=>i===0||v===uniq[i-1]+1);
+  const allSame = (uniq.length === 1 && wildCount === 0) || (cArr[0] >= totalDice);
+
+  let key = 'HIGH_CARD';
+  if (totalDice >= 5 && allSame) key = 'FIVE_OF_A_KIND';
+  else if (isStraight && totalDice >= 4) key = 'STRAIGHT';
+  else if (cArr[0] >= 4) key = 'FOUR_OF_A_KIND';
+  else if (cArr[0] >= 3 && (cArr[1] >= 2)) key = 'FULL_HOUSE';
+  else if (cArr[0] >= 3) key = 'THREE_OF_A_KIND';
+  else if (cArr[0] >= 2 && cArr[1] >= 2) key = 'TWO_PAIR';
+  else if (cArr[0] >= 2) key = 'PAIR';
+
+  const def = HANDS[key];
+  const lv = g.handLevels[key] || 1;
+  const allVals = [...vals, ...bronzeDice.map(d=>d.v)];
+  return {
+    key, vals: allVals,
+    handName: def.n + (lv > 1 ? ` LV${lv}` : '') + (wildCount > 0 ? ` [${wildCount}W]` : ''),
+    chips: def.c + (lv-1)*10,
+    mult:  def.m + (lv-1)*0.5,
+  };
+}
+
+function calculateScore(commit=false) {
+  if(!g.firstRollDone) {
+    document.getElementById('hand-name').innerText = '–';
+    document.getElementById('score-total').innerText = 0;
+    document.getElementById('score-chips').innerHTML = '';
+    return 0;
+  }
+  const { key, vals, handName, chips: baseChips, mult: baseMult } = getHandInfo();
+  const sumVals = vals.reduce((a,b)=>a+b, 0);
+
+  // Start calculating with joker bonuses
+  let chips = baseChips + sumVals + g.baseChips;
+  let mult  = baseMult + g.baseMult - 1.0; // g.baseMult starts at 1.0
+
+  // Joker calculations
+  let jokerDesc = [];
+  g.jokers.forEach(j => {
+    const res = applyJoker(j, key, vals, chips, mult);
+    chips = res.chips;
+    mult  = res.mult;
+    if(res.desc) jokerDesc.push(res.desc);
+  });
+
+  // ── MATERIAL EFFECTS ──
+  let matDescs = [];
+  let glassDice = g.dice.filter(d => d.material === 'glass' && !d.shattered);
+  let glassUnrerolled = glassDice.length > 0 && !g.glassRerolled;
+  let steelHeld = g.dice.filter(d => d.material === 'steel' && d.held && d.v !== null).length;
+
+  g.dice.forEach(d => {
+    if(d.v === null || d.shattered) return;
+    switch(d.material) {
+      case 'gold':
+        chips += 3;
+        break;
+      case 'fire':
+        if(d.v === d.sides[d.sides.length - 1]) { mult += 1.5; matDescs.push(`🔥+1.5M`); }
+        break;
+      case 'cursed':
+        if(d.v === 1) { chips += 8; matDescs.push(`💀+8C`); }
+        break;
+      case 'crystal':
+        chips += d.v; // value counts twice (already counted once in sumVals)
+        break;
+      case 'obsidian':
+        mult += g.dice.length * 0.3;
+        break;
+      case 'wooden':
+        chips += d.woodenBonus || 0;
+        break;
     }
+  });
 
-    function useConsumable() {
-        if (!g.consumable) return;
-        if (g.consumable.type === 'DEBUG') { g.rerolls = g.maxRerolls; document.getElementById('roll-btn').disabled = false; }
-        if (g.consumable.type === 'PATCH') { g.extraScore += 250; }
-        
-        g.consumable = null;
-        document.getElementById('cons-name').innerText = "EMPTY";
-        document.getElementById('use-cons-btn').style.display = 'none';
-        document.getElementById('rerolls-ui').innerText = g.rerolls;
-        initBoard();
+  // Steel: +1.5 mult per held steel die
+  if(steelHeld > 0) { mult += steelHeld * 1.5; matDescs.push(`🔩+${(steelHeld*1.5).toFixed(1)}M`); }
+
+  // Glass: x2 total score if not rerolled
+  let glassMultiplier = 1;
+  if(glassDice.length > 0 && !g.glassRerolled) { glassMultiplier = 2; matDescs.push(`🔷x2 GLASS`); }
+
+  // Bronze: handled at hand detection level (wilds), just flag for display
+  let bronzeCount = g.dice.filter(d => d.material === 'bronze' && d.v !== null && !d.shattered).length;
+  if(bronzeCount > 0) matDescs.push(`🟤x${bronzeCount} WILD`);
+
+  chips = Math.max(0, Math.floor(chips));
+  mult  = Math.max(1, mult);
+  const total = Math.floor(chips * mult * glassMultiplier);
+
+  document.getElementById('hand-name').innerText = handName;
+  document.getElementById('score-total').innerText = total;
+
+  // Chips display
+  const chipsEl = document.getElementById('score-chips');
+  chipsEl.innerHTML = '';
+  const addChip = (txt, cls) => {
+    const c = document.createElement('span');
+    c.className = `chip ${cls}`;
+    c.innerText = txt;
+    chipsEl.appendChild(c);
+  };
+  addChip(`CHIPS: ${chips}`, 'chip-blue');
+  addChip(`✕`, 'chip-green');
+  addChip(`MULT: ${mult.toFixed(1)}`, 'chip-red');
+  if(glassMultiplier > 1) addChip(`✕2 GLASS`, 'chip-blue');
+  addChip(`= ${total}`, 'chip-gold');
+  if(jokerDesc.length) addChip(jokerDesc.join(' | '), 'chip-green');
+  if(matDescs.length) addChip(matDescs.join(' '), 'chip-green');
+
+  updateScoreBar(total);
+  return total;
+}
+
+function applyJoker(j, handKey, vals, chips, mult) {
+  let desc = '';
+  switch(j.id) {
+    case 'SNIPER':     if(vals.includes(6)){ mult += 1.5; desc='+1.5M on 6'; } break;
+    case 'GAMBLER':    if(vals.includes(1)){ chips += 8; desc='+8C on 1'; } break;
+    case 'DOUBLER':    if(['PAIR','TWO_PAIR'].includes(handKey)){ mult += 2; desc='+2M pairs'; } break;
+    case 'TRIPWIRE':   if(handKey==='THREE_OF_A_KIND'||handKey==='FULL_HOUSE'){ mult += 2.5; desc='+2.5M trips'; } break;
+    case 'STRAIGHTER': if(handKey==='STRAIGHT'||handKey==='STRAIGHT_FLUSH'){ chips += 12; desc='+12C straight'; } break;
+    case 'BANKER':     chips += Math.floor(g.bank/5); desc=`+${Math.floor(g.bank/5)}C bank`; break;
+    case 'OVERCLOCK':  mult += 0.8; desc='+0.8M always'; break;
+    case 'VALIDATOR':  if(vals.every(v=>v%2===0)){ mult += 2.5; desc='+2.5M all even'; } break;
+    case 'PRIME':      if(vals.every(v=>[2,3,5,7,11,13,17,19,23].includes(v))){ chips += 10; mult += 1.5; desc='prime bonus'; } break;
+    case 'HIGHROLLER': { const max=Math.max(...vals); chips+=max; desc=`+${max}C max`; } break;
+    case 'ALLIN':      if(handKey==='FOUR_OF_A_KIND'||handKey==='FIVE_OF_A_KIND'){ mult *= 2; desc='x2M quads+'; } break;
+    case 'HEDGER':     chips += vals.length * 1; desc=`+${vals.length}C per die`; break;
+    case 'DEBUGGER':   if(g.rerolls === g.maxRerolls){ mult += 1; desc='+1M full rerolls'; } break;
+    case 'SYMMETRY':   if(vals.every((v,i,a)=>i===0||a[i-1]<=v)){ chips+=6; desc='+6C sorted'; } break;
+    case 'FIREWALL':   mult += Math.floor(g.jokers.length * 0.3); desc=`+${Math.floor(g.jokers.length*0.3)}M per joker`; break;
+    case 'ENTROPY':    { const bonus=Math.floor(Math.random()*5); chips+=bonus; desc=`+${bonus}C chaos`; } break;
+    case 'OVERKILL':   if(g.roundScore > g.target*0.5){ mult += 1.5; desc='+1.5M halfway'; } break;
+    case 'MIRRORDICE': if(new Set(vals).size===1){ mult += 4; desc='+4M all same!'; } break;
+    case 'LOWBALL':      { const lowCount = vals.filter(v=>v<=3).length; chips += lowCount; desc=lowCount?`+${lowCount}C low`:''; } break;
+    case 'COUNTER':      { const unique = new Set(vals).size; mult += unique; desc=`+${unique}M unique`; } break;
+    case 'ECHO':         { let counts={}; vals.forEach(v=>counts[v]=(counts[v]||0)+1); const pairs=Object.values(counts).filter(c=>c>=2).length; if(pairs>0){chips+=pairs*2;desc=`+${pairs*2}C pairs`;} } break;
+    case 'SCAVENGER':    { const free = g.dice.filter(d=>d.v!==null&&!d.held&&!d.shattered).length; if(free>0){chips+=free*3;desc=`+${free*3}C free dice`;} } break;
+    case 'ACCUMULATOR':  { const used = g.maxRerolls - g.rerolls; if(used>0){mult+=used*0.5;desc=`+${(used*0.5).toFixed(1)}M`;} } break;
+    case 'TWINPEAK':     { if(vals.length>1){const spread=Math.max(...vals)-Math.min(...vals); if(spread<=1){mult+=3;desc='+3M tight';}} } break;
+    case 'PALINDROME':   { const str=vals.join(''); if(str===str.split('').reverse().join('')&&vals.length>1){chips+=4;desc='+4C palindrome';} } break;
+    case 'MATERIALIZER': { const mats=new Set(g.dice.filter(d=>d.v!==null).map(d=>d.material)).size; chips+=mats; desc=`+${mats}C materials`; } break;
+    case 'THRESHOLD':    { if(chips>30){mult+=2;desc='+2M chips>30';} } break;
+    case 'GODMODE':      { mult+=Math.floor(g.roundScore*0.1); desc=`+${Math.floor(g.roundScore*0.1)}M banked`; } break;
+    case 'RECURSION':    { /* handled at score level */ } break;
+  }
+  return { chips, mult, desc };
+}
+
+function triggerJokerEvent(event, val) {
+  g.jokers.forEach(j => {
+    if(event === 'onRoll' && j.id === 'ENTROPY') {
+      document.getElementById('gc').classList.add('glitching');
+      setTimeout(() => document.getElementById('gc').classList.remove('glitching'), 200);
     }
+  });
+}
 
-    function calculatePotential() {
-        if (!g.firstRollDone) return 0;
-        let vals = g.dice.map(d => d.v).filter(v => v !== null).sort((a,b) => a-b);
-        let sum = vals.reduce((a,b) => a+b, 0);
-        let bonusMult = 0;
-        let handName = "";
+// ══════════════════════════════════════════════════════
+//  CONSUMABLES
+// ══════════════════════════════════════════════════════
+const CONSUMABLE_DEFS = {
+  DEBUG_EXE:   { name:'DEBUG.EXE',    use: () => { g.rerolls=g.maxRerolls; document.getElementById('roll-btn').disabled=false; updateUI(); notify('REROLLS RESTORED','good'); } },
+  PATCH_FIX:   { name:'PATCH.FIX',    use: () => { g.baseChips+=20; calculateScore(); notify('+20 CHIPS','good'); } },
+  BOOST_MOD:   { name:'BOOST.MOD',    use: () => { g.baseMult+=0.5; calculateScore(); notify('+0.5x MULT','good'); } },
+  DICE_SWAP:   { name:'DICE_SWAP',    use: () => { g.dice.forEach(d=>{d.held=false;}); runRoll(true); notify('ALL DICE REROLLED','info'); } },
+  DUPE_CHIP:   { name:'DUPE_CHIP',    use: () => { g.baseChips+=10; calculateScore(); notify('+10 CHIPS','good'); } },
+  CREDIT_HACK: { name:'CREDIT_HACK',  use: () => { g.bank+=15; updateUI(); notify('+$15 CREDITS','gold'); } },
+  LVLUP_HAND:  { name:'LEVELUP.EXE',  use: () => { const {key}=getHandInfo(); g.handLevels[key]=(g.handLevels[key]||1)+1; calculateScore(); notify(`${HANDS[key]?.n||key} LV UP!`,'gold'); } },
+  HOLD_ALL:    { name:'HOLD_ALL',     use: () => { g.dice.forEach(d=>{if(d.v!==null)d.held=true;}); initBoard(); notify('ALL DICE HELD','good'); } },
+  REVEAL_EXE:  { name:'REVEAL.EXE',   use: () => { const s=calculateScore(); notify(`PROJECTED SCORE: ${s}`,'info'); } },
+  REORDER_SYS: { name:'REORDER.SYS',  use: () => { const vals=g.dice.filter(d=>d.v!==null).map(d=>d.v).sort((a,b)=>a-b); let i=0; g.dice.forEach(d=>{if(d.v!==null)d.v=vals[i++];}); initBoard(); notify('DICE SORTED','info'); } },
+  MAGNET_EXE:  { name:'MAGNET.EXE',   use: () => { g.dice.forEach(d=>{if(d.v!==null&&!d.shattered)d.v=d.sides[d.sides.length-1];}); initBoard(); notify('ALL DICE MAXED','good'); } },
+  CLONE_DIE:   { name:'CLONE.DIE',    use: () => { const src=g.dice.find(d=>d.v!==null&&!d.shattered); if(src){g.dice.push({...src,held:false}); initBoard(); notify('DIE CLONED','good');} else notify('NO DIE TO CLONE','bad'); } },
+  TRANSMUTE:   { name:'TRANSMUTE',    use: () => { const mats=Object.keys(MATERIALS); const d=g.dice.find(d=>d.v!==null); if(d){d.material=mats[Math.floor(Math.random()*mats.length)]; initBoard(); notify(`DIE → ${d.material.toUpperCase()}`,'gold');} } },
+  JACKPOT_EXE: { name:'JACKPOT.EXE',  use: () => { g.firstRollDone=true; g.dice.forEach(d=>{if(!d.shattered){d.v=d.sides[d.sides.length-1];} }); document.getElementById('cash-btn').disabled=false; initBoard(); shake('xl'); notify('🎰 JACKPOT! ALL MAX!','gold'); } },
+};
 
-        let counts = {};
-        vals.forEach(v => counts[v] = (counts[v] || 0) + 1);
-        let cArr = Object.values(counts).sort((a,b) => b-a);
-        let uniqueVals = [...new Set(vals)];
-        let isStraight = uniqueVals.length >= 4 && uniqueVals.every((v, i) => i === 0 || v === uniqueVals[i-1] + 1);
+function addConsumable(id) {
+  if(g.consumables.length >= 2) { notify('CONSUMABLE SLOTS FULL','bad'); return false; }
+  g.consumables.push(id);
+  updateCons();
+  return true;
+}
 
-        if (isStraight) { bonusMult = 20; handName = "SPECTRAL STRAIGHT"; }
-        else if (cArr[0] >= 5) { bonusMult = 10; handName = "FIVE OF A KIND"; }
-        else if (cArr[0] === 4) { bonusMult = 6; handName = "FOUR OF A KIND"; }
-        else if (cArr[0] === 3 && cArr[1] === 2) { bonusMult = 4; handName = "FULL HOUSE"; }
-        else if (cArr[0] === 3) { bonusMult = 2.5; handName = "THREE OF A KIND"; }
-        else if (cArr[0] === 2 && cArr[1] === 2) { bonusMult = 1.5; handName = "TWO PAIR"; }
-        else if (cArr[0] === 2) { bonusMult = 1; handName = "PAIR"; }
+function useConsumable(id) {
+  const def = CONSUMABLE_DEFS[id];
+  if(!def) return;
+  def.use();
+  g.consumables = g.consumables.filter(c=>c!==id);
+  updateCons();
+}
 
-        g.passives.forEach(p => {
-            if(p === "SNIPER" && vals.includes(6)) bonusMult += 3;
-            if(p === "GAMBLER" && vals.includes(1)) bonusMult += 2;
-        });
+function updateCons() {
+  const slot = document.getElementById('cons-slot');
+  const empty = document.getElementById('cons-empty');
+  // Remove old cons cards
+  slot.querySelectorAll('.cons-card').forEach(el=>el.remove());
+  if(g.consumables.length === 0) {
+    if(empty) empty.style.display = '';
+  } else {
+    if(empty) empty.style.display = 'none';
+    g.consumables.forEach(id => {
+      const def = CONSUMABLE_DEFS[id];
+      if(!def) return;
+      const card = document.createElement('span');
+      card.className = 'cons-card';
+      card.innerText = def.name;
+      card.title = def.desc;
+      card.onclick = () => useConsumable(id);
+      slot.appendChild(card);
+    });
+  }
+}
 
-        let finalMult = g.baseMult + bonusMult;
-        let finalScore = Math.floor(sum * finalMult) + g.extraScore;
-        document.getElementById('last-sum').innerText = sum + (g.extraScore > 0 ? ` (+${g.extraScore})` : "");
-        document.getElementById('mult-ui').innerText = finalMult.toFixed(1);
-        document.getElementById('hand-msg').innerText = handName;
-        return finalScore;
-    }
+// ══════════════════════════════════════════════════════
+//  SHOP
+// ══════════════════════════════════════════════════════
+let currentShopTab = 'jokers';
+let shopRerollCount = 0;
+let currentShopItems = {};
 
-    function enterShop() {
-        let score = calculatePotential();
-        if (g.round >= 4 && score < g.target) {
-            document.getElementById('screen-play').classList.add('hidden');
-            document.getElementById('screen-over').classList.remove('hidden');
-            return;
-        }
-        g.bank += score;
-        updateUI();
+function enterShop() {
+  if(!g.firstRollDone) { notify('ROLL FIRST','bad'); return; }
+
+  // Score current dice
+  const score = calculateScore();
+  g.roundScore += score;
+  g.totalScore += score;
+  g.handsPlayed++;
+  triggerJokerEvent('onScore', score);
+  popScore('+' + score, document.getElementById('score-total'));
+  shake(score > 500 ? 'xl' : score > 150 ? 'lg' : 'sm');
+  updateScoreBar();
+
+  // Check quota
+  if(g.roundScore < g.target) {
+    // Failed quota — game over
+    setTimeout(() => gameOver(), 400);
+    return;
+  }
+
+  // Earn round reward
+  const reward = ANTE_TABLE[g.ante-1]?.[1] || 5;
+  g.bank += reward;
+  notify(`+$${reward} ROUND BONUS`, 'gold');
+
+  // Reset for shop
+  g.shopRerollCost = 5;
+  shopRerollCount = 0;
+  currentShopTab = 'jokers';
+
+  document.getElementById('shop-bank-ui').innerText = g.bank;
+  document.getElementById('screen-shop').classList.remove('hidden');
+  document.querySelectorAll('.shop-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'jokers'));
+  genShopForTab('jokers');
+}
+
+function switchTab(tab) {
+  currentShopTab = tab;
+  document.querySelectorAll('.shop-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  genShopForTab(tab);
+  renderShopContent();
+}
+
+function genShopForTab(tab) {
+  if(!currentShopItems[tab]) {
+    currentShopItems[tab] = generateShopItems(tab);
+  }
+}
+
+function generateShopItems(tab) {
+  const all = SHOP_CATALOG.filter(item => item.tab === tab);
+  const shuffled = [...all].sort(()=>0.5-Math.random());
+  const count = tab === 'jokers' ? 4 : tab === 'upgrades' ? 3 : tab === 'dice' ? 4 : 3;
+  return shuffled.slice(0, count).map(item => ({ ...item, sold: false }));
+}
+
+function renderShopContent() {
+  genShopForTab(currentShopTab);
+  const items = currentShopItems[currentShopTab];
+  const container = document.getElementById('shop-content');
+  container.innerHTML = '';
+
+  const title = document.createElement('div');
+  title.className = 'shop-section-title';
+  const labels = { jokers:'PASSIVE JOKERS', consumables:'CONSUMABLE ITEMS', upgrades:'PERMANENT UPGRADES', dice:'DICE MODIFICATIONS' };
+  title.innerText = labels[currentShopTab] || currentShopTab;
+  container.appendChild(title);
+
+  const grid = document.createElement('div');
+  grid.className = 'shop-grid';
+
+  items.forEach((item) => {
+    const card = document.createElement('div');
+    const rarityClass = `sc-${item.rarity}`;
+    // Recalculate cant-afford live every render — never cache it
+    const cantAfford = !item.sold && g.bank < item.cost;
+    card.className = ['shop-card', rarityClass, item.sold ? 'sold' : '', cantAfford ? 'cant-afford' : ''].filter(Boolean).join(' ');
+
+    card.innerHTML = `
+      <span class="stype">${item.tab.toUpperCase()} · ${item.rarity.toUpperCase()}</span>
+      <div class="sname">${item.name}</div>
+      <div class="sdesc">${item.desc}</div>
+      <div class="sprice">$${item.cost}</div>
+      <div class="seffect">${item.effect || ''}</div>
+    `;
+
+    if(!item.sold) {
+      card.onclick = () => {
+        if(g.bank < item.cost) { notify('INSUFFICIENT CREDITS','bad'); return; }
+        if(item.tab === 'jokers' && g.jokers.length >= 5) { notify('JOKER SLOTS FULL (5 MAX)','bad'); return; }
+        if(item.tab === 'consumables' && !addConsumable(item.id)) return;
+
+        g.bank -= item.cost;
+        item.sold = true;
+        item.f();
         document.getElementById('shop-bank-ui').innerText = g.bank;
-        document.getElementById('screen-shop').classList.remove('hidden');
-        genShop();
-    }
-
-    function genShop() {
-        const catalog = [
-            { n: "MULT +0.3", d: "Boost base mult.", c: 20, type: "PERM", f: () => g.baseMult += 0.3 },
-            { n: "DEBUG.EXE", d: "Refill Rerolls.", c: 20, type: "CONS", f: () => g.consumable = {type:'DEBUG', name:'DEBUG.EXE'} },
-            { n: "PATCH.FIX", d: "+250 flat score.", c: 40, type: "CONS", f: () => g.consumable = {type:'PATCH', name:'PATCH.FIX'} },
-            { n: "CORE DIE", d: "Add permanent D6.", c: 60, type: "PERM", f: () => g.dice.push({v:null, held:false, sides:[1,2,3,4,5,6]}) },
-            { n: "SNIPER.MOD", d: "+3 Mult on 6.", c: 45, type: "PERM", f: () => addPassive("SNIPER", "+3 Mult on 6") },
-            { n: "GAMBLER.MOD", d: "+2 Mult on 1.", c: 45, type: "PERM", f: () => addPassive("GAMBLER", "+2 Mult on 1") }
-        ];
-        const container = document.getElementById('shop-items');
-        container.innerHTML = '';
-        catalog.sort(() => 0.5 - Math.random()).slice(0, 3).forEach(item => {
-            let card = document.createElement('div');
-            card.className = 'shop-card';
-            card.innerHTML = `<span class="shop-type">${item.type}</span><br><strong>${item.n}</strong><div style="font-size:0.55rem">${item.d}</div><br>$${item.c}`;
-            
-            // --- INFINITE CREDITS LOGIC ---
-            card.onclick = () => {
-                if(item.type === "CONS" && g.consumable) return; 
-                g.bank -= item.c; // Credits will go negative if needed, no limit
-                item.f(); 
-                document.getElementById('shop-bank-ui').innerText = g.bank;
-                card.style.opacity = 0.2; 
-                card.onclick = null; 
-            };
-            container.appendChild(card);
-        });
-    }
-
-    function addPassive(name, desc) {
-        if (g.passives.includes(name)) return;
-        g.passives.push(name);
-        let tag = document.createElement('div');
-        tag.className = 'joker-card'; tag.innerHTML = `<strong>${name}</strong><br>${desc}`;
-        document.getElementById('joker-list').appendChild(tag);
-    }
-
-    function startNextRound() {
-        g.round++;
-        g.rerolls = g.maxRerolls;
-        g.firstRollDone = false;
-        g.extraScore = 0;
-        g.dice.forEach(d => { d.held = false; d.v = null; });
-        g.target = targets[g.round] || Math.floor(targets[targets.length-1] * Math.pow(1.5, g.round - 9));
-        
-        document.getElementById('screen-shop').classList.add('hidden');
-        document.getElementById('roll-btn').disabled = false;
-        document.getElementById('cash-btn').disabled = true;
-        document.getElementById('rerolls-ui').innerText = g.rerolls;
-        document.getElementById('cons-name').innerText = g.consumable ? g.consumable.name : "EMPTY";
-        document.getElementById('use-cons-btn').style.display = 'none';
-        initBoard();
         updateUI();
+        renderShopContent(); // re-render recalculates all cant-afford states live
+        notify(`PURCHASED: ${item.name}`, 'good');
+        shake('sm');
+      };
     }
 
-    function updateUI() {
-        document.getElementById('round-ui').innerText = g.round;
-        document.getElementById('target-ui').innerText = g.target;
-        document.getElementById('bank-ui').innerText = g.bank;
-        document.getElementById('mult-ui').innerText = g.baseMult.toFixed(1);
-    }
+    grid.appendChild(card);
+  });
+  container.appendChild(grid);
+}
 
-    initBoard();
-    updateUI();
+function rerollShop() {
+  const cost = g.shopRerollCost;
+  if(g.bank < cost) { notify('INSUFFICIENT CREDITS','bad'); return; }
+  g.bank -= cost;
+  shopRerollCount++;
+  g.shopRerollCost = 5 + shopRerollCount * 3;
+  currentShopItems[currentShopTab] = generateShopItems(currentShopTab);
+  document.getElementById('shop-bank-ui').innerText = g.bank;
+  document.getElementById('reroll-cost-ui').innerText = g.shopRerollCost;
+  updateUI();
+  renderShopContent();
+  shake('sm');
+}
+
+// ══════════════════════════════════════════════════════
+//  SHOP CATALOG
+// ══════════════════════════════════════════════════════
+const SHOP_CATALOG = [
+  // ── JOKERS ──
+  { tab:'jokers', rarity:'common',    name:'SNIPER.MOD',     id:'SNIPER',      cost:4,  desc:'Gain +1.5 Mult whenever a 6 appears in your roll.',       effect:'+1.5M on 6',          f:()=>addJoker({id:'SNIPER',     name:'SNIPER.MOD',     desc:'+1.5M on 6',     rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'GAMBLER.MOD',    id:'GAMBLER',     cost:4,  desc:'Gain +8 Chips whenever a 1 appears.',                      effect:'+8C on 1',            f:()=>addJoker({id:'GAMBLER',    name:'GAMBLER.MOD',    desc:'+8C on 1',       rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'HEDGER.LOG',     id:'HEDGER',      cost:5,  desc:'Gain +1 Chip for each die in your roll.',                  effect:'+1C per die',         f:()=>addJoker({id:'HEDGER',     name:'HEDGER.LOG',     desc:'+1C/die',        rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'OVERCLOCK.EXE',  id:'OVERCLOCK',   cost:6,  desc:'Always gain +0.8 Mult regardless of hand.',               effect:'+0.8M always',        f:()=>addJoker({id:'OVERCLOCK',  name:'OVERCLOCK.EXE',  desc:'+0.8M always',   rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'ENTROPY.DLL',    id:'ENTROPY',     cost:5,  desc:'Gain 0–4 random bonus Chips each score. Glitches on roll.',effect:'0-4C chaos',          f:()=>addJoker({id:'ENTROPY',    name:'ENTROPY.DLL',    desc:'chaos chips',    rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'SYMMETRY.SYS',   id:'SYMMETRY',    cost:5,  desc:'Gain +6 Chips if all dice values are in ascending order.', effect:'+6C if sorted',       f:()=>addJoker({id:'SYMMETRY',   name:'SYMMETRY.SYS',   desc:'+6C sorted',     rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'LOWBALL.EXE',    id:'LOWBALL',     cost:4,  desc:'Gain +1 Chip for every die showing a value of 3 or less.', effect:'+1C per low die',     f:()=>addJoker({id:'LOWBALL',    name:'LOWBALL.EXE',    desc:'+1C low dice',   rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'COUNTER.LOG',    id:'COUNTER',     cost:5,  desc:'Gain +1 Mult for each unique die value showing.',          effect:'+1M per unique val',  f:()=>addJoker({id:'COUNTER',    name:'COUNTER.LOG',    desc:'+1M unique vals',rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'ECHO.MOD',       id:'ECHO',        cost:5,  desc:'Gain +2 Chips for each pair of matching dice.',            effect:'+2C per pair',        f:()=>addJoker({id:'ECHO',       name:'ECHO.MOD',       desc:'+2C per match',  rarity:'common'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'DOUBLER.EXE',    id:'DOUBLER',     cost:7,  desc:'Pairs and Two Pair give +2 Mult.',                        effect:'+2M on pairs',        f:()=>addJoker({id:'DOUBLER',    name:'DOUBLER.EXE',    desc:'+2M pairs',      rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'TRIPWIRE.MOD',   id:'TRIPWIRE',    cost:8,  desc:'Three of a Kind and Full House give +2.5 Mult.',          effect:'+2.5M on trips',      f:()=>addJoker({id:'TRIPWIRE',   name:'TRIPWIRE.MOD',   desc:'+2.5M trips',    rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'STRAIGHTER.EXE', id:'STRAIGHTER',  cost:8,  desc:'Straights grant +12 bonus Chips.',                        effect:'+12C on straights',   f:()=>addJoker({id:'STRAIGHTER', name:'STRAIGHTER.EXE', desc:'+12C straight',  rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'HIGHROLLER.DLL', id:'HIGHROLLER',  cost:9,  desc:'Gain Chips equal to the highest die value.',              effect:'+max val chips',      f:()=>addJoker({id:'HIGHROLLER', name:'HIGHROLLER.DLL', desc:'+max C',         rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'BANKER.EXE',     id:'BANKER',      cost:10, desc:'Gain bonus Chips equal to 20% of your credits.',          effect:'Chips = bank/5',      f:()=>addJoker({id:'BANKER',     name:'BANKER.EXE',     desc:'bank% chips',    rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'DEBUGGER.MOD',   id:'DEBUGGER',    cost:8,  desc:'Gain +1 Mult if you still have all rerolls when scoring.', effect:'+1M full rerolls',   f:()=>addJoker({id:'DEBUGGER',   name:'DEBUGGER.MOD',   desc:'+1M no rerolls', rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'SCAVENGER.EXE',  id:'SCAVENGER',   cost:7,  desc:'Gain +3 Chips for each die NOT held when scoring.',       effect:'+3C per free die',    f:()=>addJoker({id:'SCAVENGER',  name:'SCAVENGER.EXE',  desc:'+3C unheld dice',rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'ACCUMULATOR.DLL',id:'ACCUMULATOR', cost:9,  desc:'Gain +0.5 Mult for each reroll you used this round.',     effect:'+0.5M per reroll',    f:()=>addJoker({id:'ACCUMULATOR',name:'ACCUMULATOR.DLL',desc:'+0.5M/reroll',   rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'TWINPEAK.MOD',   id:'TWINPEAK',    cost:8,  desc:'If your highest and lowest dice differ by 1 or less, gain +3 Mult.', effect:'+3M tight spread', f:()=>addJoker({id:'TWINPEAK', name:'TWINPEAK.MOD', desc:'+3M tight spread',rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'rare',      name:'VALIDATOR.EXE',  id:'VALIDATOR',   cost:12, desc:'Gain +2.5 Mult if ALL dice show even numbers.',           effect:'+2.5M all even',      f:()=>addJoker({id:'VALIDATOR',  name:'VALIDATOR.EXE',  desc:'+2.5M all even', rarity:'rare'}) },
+  { tab:'jokers', rarity:'rare',      name:'PRIME.CORE',     id:'PRIME',       cost:13, desc:'Gain +1.5M and +10C if all dice are prime numbers.',      effect:'+1.5M+10C all prime', f:()=>addJoker({id:'PRIME',      name:'PRIME.CORE',     desc:'prime bonus',    rarity:'rare'}) },
+  { tab:'jokers', rarity:'rare',      name:'OVERKILL.MOD',   id:'OVERKILL',    cost:12, desc:'Gain +1.5 Mult once round score exceeds 50% of quota.',   effect:'+1.5M at halfway',    f:()=>addJoker({id:'OVERKILL',   name:'OVERKILL.MOD',   desc:'+1.5M halfway',  rarity:'rare'}) },
+  { tab:'jokers', rarity:'rare',      name:'FIREWALL.DLL',   id:'FIREWALL',    cost:11, desc:'Gain +0.3 Mult for each joker you own.',                  effect:'+0.3M per joker',     f:()=>addJoker({id:'FIREWALL',   name:'FIREWALL.DLL',   desc:'+0.3M/joker',    rarity:'rare'}) },
+  { tab:'jokers', rarity:'rare',      name:'PALINDROME.SYS', id:'PALINDROME',  cost:11, desc:'Gain +4 Chips if dice values read same forwards & backwards.', effect:'+4C palindrome',  f:()=>addJoker({id:'PALINDROME', name:'PALINDROME.SYS', desc:'+4C palindrome', rarity:'rare'}) },
+  { tab:'jokers', rarity:'rare',      name:'MATERIALIZER.EXE',id:'MATERIALIZER',cost:13,desc:'Gain +1 Chip for each distinct die material in your pool.',effect:'+1C per material',   f:()=>addJoker({id:'MATERIALIZER',name:'MATERIALIZER.EXE',desc:'+1C/material',  rarity:'rare'}) },
+  { tab:'jokers', rarity:'rare',      name:'THRESHOLD.MOD',  id:'THRESHOLD',   cost:12, desc:'Gain +2 Mult if your score formula chips exceed 30.',     effect:'+2M if chips>30',     f:()=>addJoker({id:'THRESHOLD',  name:'THRESHOLD.MOD',  desc:'+2M chips>30',   rarity:'rare'}) },
+  { tab:'jokers', rarity:'legendary', name:'ALL-IN.EXE',     id:'ALLIN',       cost:18, desc:'DOUBLE your Mult on Four of a Kind or better.',          effect:'x2M on quads+',       f:()=>addJoker({id:'ALLIN',      name:'ALL-IN.EXE',     desc:'x2M quads+',     rarity:'legendary'}) },
+  { tab:'jokers', rarity:'legendary', name:'MIRRORDICE.SYS', id:'MIRRORDICE',  cost:20, desc:'Gain +4 Mult if all dice show the same value.',           effect:'+4M all matching',    f:()=>addJoker({id:'MIRRORDICE', name:'MIRRORDICE.SYS', desc:'+4M all same',   rarity:'legendary'}) },
+  { tab:'jokers', rarity:'legendary', name:'GODMODE.EXE',    id:'GODMODE',     cost:25, desc:'Gain +1 Mult for every point of score already banked this ante.', effect:'+1M per banked score', f:()=>addJoker({id:'GODMODE', name:'GODMODE.EXE',  desc:'+M=roundScore',  rarity:'legendary'}) },
+  { tab:'jokers', rarity:'legendary', name:'RECURSION.DLL',  id:'RECURSION',   cost:22, desc:'Score is calculated twice and the higher result is used.', effect:'Score max of 2 rolls', f:()=>addJoker({id:'RECURSION', name:'RECURSION.DLL', desc:'best of 2 calc', rarity:'legendary'}) },
+
+  // ── CONSUMABLES ──
+  { tab:'consumables', rarity:'common',   name:'DEBUG.EXE',    id:'DEBUG_EXE',   cost:3,  desc:'Restore all rerolls instantly.',                        f:()=>addConsumable('DEBUG_EXE') },
+  { tab:'consumables', rarity:'common',   name:'DICE_SWAP',    id:'DICE_SWAP',   cost:3,  desc:'Free reroll of all un-held dice.',                      f:()=>addConsumable('DICE_SWAP') },
+  { tab:'consumables', rarity:'common',   name:'PATCH.FIX',    id:'PATCH_FIX',   cost:4,  desc:'+20 bonus chips applied this round.',                   f:()=>addConsumable('PATCH_FIX') },
+  { tab:'consumables', rarity:'common',   name:'DUPE_CHIP',    id:'DUPE_CHIP',   cost:3,  desc:'+10 bonus chips applied immediately.',                  f:()=>addConsumable('DUPE_CHIP') },
+  { tab:'consumables', rarity:'common',   name:'HOLD_ALL',     id:'HOLD_ALL',    cost:4,  desc:'Hold all dice simultaneously.',                         f:()=>addConsumable('HOLD_ALL') },
+  { tab:'consumables', rarity:'common',   name:'REVEAL.EXE',   id:'REVEAL_EXE',  cost:3,  desc:'Show what score you\'d get before UPLINKing.',          f:()=>addConsumable('REVEAL_EXE') },
+  { tab:'consumables', rarity:'uncommon', name:'BOOST.MOD',    id:'BOOST_MOD',   cost:5,  desc:'+0.5x base mult this round.',                           f:()=>addConsumable('BOOST_MOD') },
+  { tab:'consumables', rarity:'uncommon', name:'CREDIT_HACK',  id:'CREDIT_HACK', cost:2,  desc:'Steal $15 credits from the system.',                    f:()=>addConsumable('CREDIT_HACK') },
+  { tab:'consumables', rarity:'uncommon', name:'REORDER.SYS',  id:'REORDER_SYS', cost:5,  desc:'Sort all dice values in ascending order.',              f:()=>addConsumable('REORDER_SYS') },
+  { tab:'consumables', rarity:'uncommon', name:'MAGNET.EXE',   id:'MAGNET_EXE',  cost:5,  desc:'Set all dice to their maximum face value.',             f:()=>addConsumable('MAGNET_EXE') },
+  { tab:'consumables', rarity:'rare',     name:'LEVELUP.EXE',  id:'LVLUP_HAND',  cost:8,  desc:'Level up the current best hand type permanently.',      f:()=>addConsumable('LVLUP_HAND') },
+  { tab:'consumables', rarity:'rare',     name:'CLONE.DIE',    id:'CLONE_DIE',   cost:7,  desc:'Duplicate one of your dice (adds copy to pool).',       f:()=>addConsumable('CLONE_DIE') },
+  { tab:'consumables', rarity:'rare',     name:'TRANSMUTE',    id:'TRANSMUTE',   cost:6,  desc:'Change a random die to a random material.',             f:()=>addConsumable('TRANSMUTE') },
+  { tab:'consumables', rarity:'legendary',name:'JACKPOT.EXE',  id:'JACKPOT_EXE', cost:12, desc:'Set ALL dice to 6 instantly.',                          f:()=>addConsumable('JACKPOT_EXE') },
+
+  // ── UPGRADES ──
+  { tab:'upgrades', rarity:'common',   name:'MULT +0.3',       cost:6,  desc:'Permanently increases base multiplier by 0.3.',      effect:'Base Mult +0.3',    f:()=>{ g.baseMult += 0.3; notify('BASE MULT +0.3','good'); } },
+  { tab:'upgrades', rarity:'common',   name:'MULT +0.5',       cost:10, desc:'Permanently increases base multiplier by 0.5.',      effect:'Base Mult +0.5',    f:()=>{ g.baseMult += 0.5; notify('BASE MULT +0.5','good'); } },
+  { tab:'upgrades', rarity:'common',   name:'CHIPS +5',        cost:5,  desc:'Permanently increases base chips by 5.',             effect:'Base Chips +5',     f:()=>{ g.baseChips += 5; notify('BASE CHIPS +5','good'); } },
+  { tab:'upgrades', rarity:'common',   name:'CHIPS +10',       cost:9,  desc:'Permanently increases base chips by 10.',            effect:'Base Chips +10',    f:()=>{ g.baseChips += 10; notify('BASE CHIPS +10','good'); } },
+  { tab:'upgrades', rarity:'common',   name:'CHIPS +20',       cost:15, desc:'Permanently increases base chips by 20.',            effect:'Base Chips +20',    f:()=>{ g.baseChips += 20; notify('BASE CHIPS +20','good'); } },
+  { tab:'upgrades', rarity:'uncommon', name:'REROLL+ UPGRADE', cost:8,  desc:'Gain +1 max reroll per round permanently.',          effect:'Max Rerolls +1',    f:()=>{ g.maxRerolls++; g.rerolls = g.maxRerolls; notify('MAX REROLLS +1','good'); } },
+  { tab:'upgrades', rarity:'uncommon', name:'INTEREST.SYS',    cost:10, desc:'Earn $1 for every $5 in the bank at round end.',     effect:'5% interest/round', f:()=>{ g.hasInterest = true; notify('INTEREST ENABLED','gold'); } },
+  { tab:'upgrades', rarity:'uncommon', name:'STARTING BONUS',  cost:9,  desc:'Begin each round with +8 bonus chips pre-loaded.',   effect:'+8 chips on start', f:()=>{ g.startingChips = (g.startingChips||0)+8; notify('+8 STARTING CHIPS','good'); } },
+  { tab:'upgrades', rarity:'rare',     name:'LVLUP PAIR',      cost:12, desc:'Level up PAIR hand.',                                effect:'Pair LV+1',         f:()=>{ g.handLevels['PAIR']=(g.handLevels['PAIR']||1)+1; notify('PAIR LV UP!','gold'); } },
+  { tab:'upgrades', rarity:'rare',     name:'LVLUP THREE OAK', cost:13, desc:'Level up THREE OF A KIND hand.',                    effect:'Three OAK LV+1',    f:()=>{ g.handLevels['THREE_OF_A_KIND']=(g.handLevels['THREE_OF_A_KIND']||1)+1; notify('3OAK LV UP!','gold'); } },
+  { tab:'upgrades', rarity:'rare',     name:'LVLUP STRAIGHT',  cost:14, desc:'Level up STRAIGHT hand.',                           effect:'Straight LV+1',     f:()=>{ g.handLevels['STRAIGHT']=(g.handLevels['STRAIGHT']||1)+1; notify('STRAIGHT LV UP!','gold'); } },
+  { tab:'upgrades', rarity:'rare',     name:'LVLUP FULL HOUSE',cost:14, desc:'Level up FULL HOUSE hand.',                         effect:'Full House LV+1',   f:()=>{ g.handLevels['FULL_HOUSE']=(g.handLevels['FULL_HOUSE']||1)+1; notify('FULL HOUSE LV UP!','gold'); } },
+  { tab:'upgrades', rarity:'rare',     name:'LVLUP FOUR OAK',  cost:16, desc:'Level up FOUR OF A KIND hand.',                     effect:'Four OAK LV+1',     f:()=>{ g.handLevels['FOUR_OF_A_KIND']=(g.handLevels['FOUR_OF_A_KIND']||1)+1; notify('4OAK LV UP!','gold'); } },
+  { tab:'upgrades', rarity:'rare',     name:'MULT +1.0',       cost:18, desc:'Permanently increases base multiplier by 1.0.',      effect:'Base Mult +1.0',    f:()=>{ g.baseMult += 1.0; notify('BASE MULT +1.0!','gold'); } },
+  { tab:'upgrades', rarity:'legendary',name:'OVERCLOCK CORE',  cost:20, desc:'Permanently doubles base mult and halves base chips. High risk, high reward.', effect:'Mult x2, Chips /2', f:()=>{ g.baseMult *= 2; g.baseChips = Math.floor(g.baseChips/2); notify('OVERCLOCK CORE INSTALLED!','gold'); } },
+  { tab:'upgrades', rarity:'legendary',name:'INTEREST PRIME',  cost:22, desc:'Earn $1 for every $3 banked at round end.',         effect:'33% interest/round', f:()=>{ g.hasInterestPrime = true; notify('PRIME INTEREST ENABLED','gold'); } },
+
+  // ── DICE MODS ──
+  { tab:'dice', rarity:'common',    name:'STONE DIE (D6)',    cost:5,  desc:'Add a standard stone D6.',                                                    effect:'+1 D6 · STONE',       f:()=>{ g.dice.push(makeDie([1,2,3,4,5,6],'stone')); initBoard(); notify('+1 STONE D6','info'); } },
+  { tab:'dice', rarity:'common',    name:'STONE DIE (D8)',    cost:8,  desc:'Add a stone D8.',                                                             effect:'+1 D8 · STONE',       f:()=>{ g.dice.push(makeDie([1,2,3,4,5,6,7,8],'stone')); initBoard(); notify('+1 STONE D8','info'); } },
+  { tab:'dice', rarity:'common',    name:'STONE DIE (D10)',   cost:11, desc:'Add a stone D10.',                                                            effect:'+1 D10 · STONE',      f:()=>{ g.dice.push(makeDie([1,2,3,4,5,6,7,8,9,10],'stone')); initBoard(); notify('+1 STONE D10','info'); } },
+  { tab:'dice', rarity:'uncommon',  name:'GOLD DIE',          cost:10, desc:'Add a Gold D6. Gives +3 flat chips each roll.',                              effect:'+3C always · GOLD',   f:()=>{ g.dice.push(makeDie([1,2,3,4,5,6],'gold')); initBoard(); notify('+1 GOLD DIE','gold'); } },
+  { tab:'dice', rarity:'uncommon',  name:'FIRE DIE',          cost:10, desc:'Add a Fire D6. Grants +1.5 Mult when max face is rolled.',                  effect:'+1.5M on max · FIRE', f:()=>{ g.dice.push(makeDie([1,2,3,4,5,6],'fire')); initBoard(); notify('+1 FIRE DIE','good'); } },
+  { tab:'dice', rarity:'uncommon',  name:'CURSED DIE',        cost:9,  desc:'Add a Cursed D6. Rolling 1 gives +8 chips.',                                effect:'+8C on 1 · CURSED',   f:()=>{ g.dice.push(makeDie([1,2,3,4,5,6],'cursed')); initBoard(); notify('+1 CURSED DIE','info'); } },
+  { tab:'dice', rarity:'uncommon',  name:'WOODEN DIE',        cost:8,  desc:'Add a Wooden D6. Gains +1 max face permanently each round.',                effect:'Grows · WOODEN',      f:()=>{ g.dice.push(makeDie([1,2,3,4,5,6],'wooden')); initBoard(); notify('+1 WOODEN DIE','good'); } },
+  { tab:'dice', rarity:'rare',      name:'GLASS DIE',         cost:14, desc:'Add a Glass D6. x2 score if never rerolled. SHATTERS if rerolled.',         effect:'x2 or shatter · GLASS',f:()=>{ g.dice.push(makeDie([1,2,3,4,5,6],'glass')); initBoard(); notify('+1 GLASS DIE','info'); } },
+  { tab:'dice', rarity:'rare',      name:'STEEL DIE',         cost:13, desc:'Add a Steel D6. Each held steel die grants +1.5 Mult.',                     effect:'+1.5M held · STEEL',  f:()=>{ g.dice.push(makeDie([1,2,3,4,5,6],'steel')); initBoard(); notify('+1 STEEL DIE','info'); } },
+  { tab:'dice', rarity:'rare',      name:'BRONZE DIE',        cost:12, desc:'Add a Bronze D6. Acts as a wild for hand detection.',                        effect:'WILD · BRONZE',       f:()=>{ g.dice.push(makeDie([1,2,3,4,5,6],'bronze')); initBoard(); notify('+1 BRONZE DIE','gold'); } },
+  { tab:'dice', rarity:'rare',      name:'CRYSTAL DIE',       cost:15, desc:'Add a Crystal D6. Its pip value is counted twice toward chips.',             effect:'x2 value · CRYSTAL',  f:()=>{ g.dice.push(makeDie([1,2,3,4,5,6],'crystal')); initBoard(); notify('+1 CRYSTAL DIE','good'); } },
+  { tab:'dice', rarity:'legendary', name:'OBSIDIAN DIE',      cost:18, desc:'Add an Obsidian D6. Grants +0.3 Mult per die in your entire pool.',          effect:'+0.3M/die · OBS',     f:()=>{ g.dice.push(makeDie([1,2,3,4,5,6],'obsidian')); initBoard(); notify('+1 OBSIDIAN DIE','good'); } },
+  { tab:'dice', rarity:'uncommon',  name:'FORGE: →GOLD',      cost:12, desc:'Convert one Stone die into a Gold die.',                                     effect:'Stone→Gold',          f:()=>convertDie('stone','gold') },
+  { tab:'dice', rarity:'uncommon',  name:'FORGE: →FIRE',      cost:12, desc:'Convert one Stone die into a Fire die.',                                     effect:'Stone→Fire',          f:()=>convertDie('stone','fire') },
+  { tab:'dice', rarity:'uncommon',  name:'FORGE: →WOODEN',    cost:9,  desc:'Convert one Stone die into a Wooden die.',                                   effect:'Stone→Wooden',        f:()=>convertDie('stone','wooden') },
+  { tab:'dice', rarity:'rare',      name:'FORGE: →CRYSTAL',   cost:16, desc:'Convert any die into a Crystal die.',                                        effect:'Any→Crystal',         f:()=>convertDie(null,'crystal') },
+  { tab:'dice', rarity:'rare',      name:'FORGE: →STEEL',     cost:14, desc:'Convert any die into a Steel die.',                                          effect:'Any→Steel',           f:()=>convertDie(null,'steel') },
+  { tab:'dice', rarity:'rare',      name:'FORGE: →BRONZE',    cost:13, desc:'Convert any die into a Bronze (wild) die.',                                  effect:'Any→Bronze',          f:()=>convertDie(null,'bronze') },
+  { tab:'dice', rarity:'legendary', name:'FORGE: →OBSIDIAN',  cost:20, desc:'Convert any die into an Obsidian die.',                                      effect:'Any→Obsidian',        f:()=>convertDie(null,'obsidian') },
+  { tab:'dice', rarity:'rare',      name:'SHATTER PROOF',     cost:12, desc:'Permanently protect all Glass dice — they no longer shatter on reroll.',     effect:'Glass immune to shatter',f:()=>{ g.glassShatterProof = true; notify('GLASS IS NOW SHATTERPROOF','info'); } },
+];
+
+function convertDie(fromMat, toMat) {
+  const target = fromMat
+    ? g.dice.find(d => d.material === fromMat)
+    : g.dice.find(d => d.material !== toMat);
+  if(!target) { notify(`NO ELIGIBLE DIE FOUND`, 'bad'); return; }
+  target.material = toMat;
+  if(toMat === 'wooden') target.woodenBonus = 0;
+  initBoard();
+  notify(`DIE CONVERTED → ${toMat.toUpperCase()}`, 'gold');
+}
+
+function addJoker(jokerDef) {
+  if(g.jokers.length >= 5) return;
+  if(g.jokers.find(j=>j.id===jokerDef.id)) { notify('JOKER ALREADY OWNED','bad'); return; }
+  g.jokers.push(jokerDef);
+  renderJokers();
+}
+
+function renderJokers() {
+  const list = document.getElementById('joker-list');
+  list.innerHTML = '';
+  g.jokers.forEach(j => {
+    const card = document.createElement('div');
+    card.className = `joker-card joker-rarity-${j.rarity}`;
+    card.innerHTML = `<span class="jname">${j.name}</span>${j.desc}`;
+    list.appendChild(card);
+  });
+  document.getElementById('joker-count').innerText = g.jokers.length;
+}
+
+// ══════════════════════════════════════════════════════
+//  ROUND PROGRESSION
+// ══════════════════════════════════════════════════════
+function startNextRound() {
+  // Advance round / ante
+  g.round++;
+  if(g.round > 3) {
+    g.ante++;
+    g.round = 1;
+    if(g.ante > MAX_ANTE) { winGame(); return; }
+  }
+
+  g.target = ANTE_TABLE[g.ante-1][0];
+  g.roundScore = 0;
+  g.rerolls = g.maxRerolls;
+  g.firstRollDone = false;
+  g.baseChips = 0;
+  g.shopRerollCost = 5;
+  currentShopItems = {};
+
+  // Interest earnings
+  if(g.hasInterestPrime) { const earn=Math.floor(g.bank/3); g.bank+=earn; if(earn>0) notify(`+$${earn} PRIME INTEREST`,'gold'); }
+  else if(g.hasInterest) { const earn=Math.floor(g.bank/5); g.bank+=earn; if(earn>0) notify(`+$${earn} INTEREST`,'gold'); }
+
+  // Starting chips bonus
+  if(g.startingChips) g.baseChips += g.startingChips;
+
+  // Wooden dice gain +1 to max face each round
+  g.dice.forEach(d => {
+    if(d.material === 'wooden') {
+      d.woodenBonus = (d.woodenBonus || 0) + 1;
+      d.sides = Array.from({length: 6 + d.woodenBonus}, (_,i) => i+1);
+    }
+  });
+
+  g.glassRerolled = false;
+  g.dice.forEach(d => { d.held=false; d.v=null; if(d.shattered) d.shattered=false; });
+
+  document.getElementById('screen-shop').classList.add('hidden');
+  document.getElementById('roll-btn').disabled = false;
+  document.getElementById('cash-btn').disabled = true;
+  document.getElementById('rerolls-ui').innerText = g.rerolls;
+  document.getElementById('hand-name').innerText = '–';
+  document.getElementById('score-total').innerText = '0';
+  document.getElementById('score-chips').innerHTML = '';
+  document.getElementById('score-bar-inner').style.width = '0%';
+  document.getElementById('score-progress-txt').innerText = `0 / ${g.target}`;
+
+  buildAntePips();
+  initBoard();
+  updateUI();
+}
+
+function winGame() {
+  document.getElementById('screen-win').classList.remove('hidden');
+  document.getElementById('win-stats').innerHTML = `ALL ${MAX_ANTE} ANTES CLEARED<br>TOTAL SCORE: ${g.totalScore}<br>CREDITS REMAINING: $${g.bank}`;
+  shake('xl');
+}
+
+// ══════════════════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════════════════
+function updateUI() {
+  document.getElementById('round-ui').innerText = g.round;
+  document.getElementById('ante-ui').innerText = g.ante;
+  document.getElementById('target-ui').innerText = g.target;
+  document.getElementById('bank-ui').innerText = g.bank;
+  document.getElementById('rerolls-ui').innerText = g.rerolls;
+  if(document.getElementById('shop-bank-ui'))
+    document.getElementById('shop-bank-ui').innerText = g.bank;
+}
+
+function updateScoreBar(current) {
+  const pct = Math.min(100, Math.floor((g.roundScore + (current||0)) / g.target * 100));
+  document.getElementById('score-bar-inner').style.width = pct + '%';
+  document.getElementById('score-progress-txt').innerText = `${g.roundScore} / ${g.target}`;
+}
+
+function buildAntePips() {
+  const container = document.getElementById('ante-pips');
+  container.innerHTML = '';
+  for(let i=1; i<=MAX_ANTE; i++) {
+    const pip = document.createElement('div');
+    pip.className = `ante-pip ${i < g.ante ? 'done' : ''}`;
+    container.appendChild(pip);
+  }
+}
+
+function shake(size) {
+  const el = document.getElementById('gc');
+  const cls = 'shake-' + size;
+  el.classList.remove('shake-sm','shake-lg','shake-xl');
+  void el.offsetWidth;
+  el.classList.add(cls);
+  el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+}
+
+function notify(msg, type='info') {
+  const container = document.getElementById('notif');
+  const el = document.createElement('div');
+  el.className = `notif-msg notif-${type}`;
+  el.innerText = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
+function popScore(text, anchor) {
+  const pop = document.createElement('div');
+  pop.className = 'score-pop';
+  pop.innerText = text;
+  pop.style.color = '#ffd700';
+  pop.style.left = anchor.offsetLeft + anchor.offsetWidth/2 - 30 + 'px';
+  pop.style.top = anchor.offsetTop - 10 + 'px';
+  document.getElementById('gc').appendChild(pop);
+  setTimeout(() => pop.remove(), 1050);
+}
+
+// ══════════════════════════════════════════════════════
+//  AMBIENT GLITCH
+// ══════════════════════════════════════════════════════
+setInterval(() => {
+  if(Math.random() > 0.91) {
+    document.getElementById('gc').classList.add('glitching');
+    setTimeout(() => document.getElementById('gc').classList.remove('glitching'), 220);
+  }
+}, 4000);
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+initGame();
 </script>
 </body>
 </html>

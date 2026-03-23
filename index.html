@@ -734,6 +734,248 @@ button.btn-big { padding: clamp(10px,2.5vw,14px) clamp(20px,4vw,36px); font-size
 @keyframes pfSlideOut { from{opacity:1;transform:none} to{opacity:0;transform:translateY(4px)} }
 #purchase-flash.visible { animation: pfSlideIn 0.12s ease-out; }
 #purchase-flash.hiding  { animation: pfSlideOut 0.2s ease-in forwards; }
+/* ── MAIN MENU ── */
+#screen-menu {
+  position: absolute; inset: 0; z-index: 100;
+  background: #000;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+#menu-bg-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(57,255,20,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57,255,20,0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: menuGridScroll 20s linear infinite;
+}
+@keyframes menuGridScroll { from{background-position:0 0} to{background-position:40px 40px} }
+#menu-content {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  gap: clamp(16px, 4vh, 32px);
+  padding: clamp(20px, 5vw, 40px);
+  width: 100%; max-width: 560px;
+}
+#menu-logo { text-align: center; }
+#menu-title {
+  font-size: clamp(2.4rem, 8vw, 4.2rem);
+  font-weight: 900; letter-spacing: clamp(4px, 2vw, 12px);
+  color: var(--ng); text-shadow: var(--glow2), 0 0 60px rgba(57,255,20,0.3);
+  animation: menuTitlePulse 3s ease-in-out infinite alternate;
+}
+@keyframes menuTitlePulse {
+  from { text-shadow: var(--glow2), 0 0 40px rgba(57,255,20,0.2); }
+  to   { text-shadow: 0 0 30px rgba(57,255,20,1), 0 0 80px rgba(57,255,20,0.5), 0 0 120px rgba(57,255,20,0.2); }
+}
+#menu-sub {
+  font-size: clamp(0.5rem, 1.8vw, 0.75rem);
+  letter-spacing: clamp(4px, 2vw, 10px);
+  color: var(--ng3); opacity: 0.7; margin-top: 4px;
+}
+#menu-version {
+  font-size: clamp(0.35rem, 1.2vw, 0.5rem);
+  opacity: 0.3; letter-spacing: 3px; margin-top: 6px;
+}
+
+/* Boot terminal */
+#menu-boot-term {
+  width: 100%;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(57,255,20,0.3);
+  padding: clamp(10px,3vw,18px) clamp(14px,4vw,24px);
+  font-size: clamp(0.58rem, 1.6vw, 0.75rem);
+  line-height: 1.8;
+  min-height: 80px;
+  text-transform: none;
+}
+#menu-term-lines { white-space: pre-wrap; }
+.mterm-line { display: block; color: rgba(57,255,20,0.75); }
+.mterm-line.mt-cmd::before { content: '> '; color: var(--ng3); }
+.mterm-line.mt-bright { color: var(--ng); text-shadow: var(--glow); }
+.mterm-line.mt-dim { color: rgba(57,255,20,0.35); }
+.mterm-line.mt-gold { color: var(--gold); }
+#menu-term-cursor {
+  color: var(--ng); animation: termBlink 0.7s step-end infinite;
+  font-size: clamp(0.58rem, 1.6vw, 0.75rem);
+}
+
+/* Save slots */
+#menu-slots-wrap { width: 100%; }
+.menu-section-label {
+  font-size: clamp(0.42rem, 1.2vw, 0.55rem);
+  opacity: 0.45; letter-spacing: 3px; margin-bottom: clamp(8px,2vw,14px);
+}
+#save-slots { display: flex; flex-direction: column; gap: clamp(7px,1.5vw,10px); }
+
+.save-slot {
+  border: 2px solid rgba(57,255,20,0.35);
+  padding: clamp(10px,2.5vw,14px) clamp(14px,3.5vw,20px);
+  cursor: pointer; transition: all 0.15s;
+  display: grid; grid-template-columns: auto 1fr auto;
+  align-items: center; gap: clamp(10px,2vw,18px);
+  background: rgba(0,0,0,0.5);
+  touch-action: manipulation;
+}
+.save-slot:hover, .save-slot.selected {
+  border-color: var(--ng);
+  background: rgba(57,255,20,0.07);
+  box-shadow: var(--glow);
+}
+.save-slot.selected { border-color: var(--ng3); }
+.slot-num {
+  font-size: clamp(1rem, 3vw, 1.4rem); font-weight: 900;
+  color: rgba(57,255,20,0.4); width: 1.5em; text-align: center;
+}
+.save-slot.selected .slot-num, .save-slot:hover .slot-num { color: var(--ng); }
+.slot-info { min-width: 0; }
+.slot-name {
+  font-size: clamp(0.62rem, 1.8vw, 0.8rem); font-weight: bold;
+  color: var(--ng); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.slot-detail {
+  font-size: clamp(0.4rem, 1.1vw, 0.52rem); color: rgba(57,255,20,0.5);
+  margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.slot-badge {
+  font-size: clamp(0.38rem, 1vw, 0.48rem);
+  padding: 2px 7px; border: 1px solid;
+  white-space: nowrap; flex-shrink: 0;
+}
+.slot-badge.has-save { border-color: var(--gold); color: var(--gold); }
+.slot-badge.empty    { border-color: rgba(57,255,20,0.2); color: rgba(57,255,20,0.2); }
+
+#menu-actions {
+  display: flex; gap: clamp(8px,2vw,14px); margin-top: clamp(12px,3vw,18px);
+  flex-wrap: wrap;
+}
+#menu-actions button { flex: 1; min-width: 120px; }
+#menu-hint {
+  font-size: clamp(0.36rem, 1vw, 0.46rem); opacity: 0.3;
+  text-align: center; margin-top: clamp(6px,1.5vw,10px);
+  letter-spacing: 1px;
+}
+
+/* Save button in shop */
+button.btn-save { border-color: rgba(57,255,20,0.5); color: rgba(57,255,20,0.7); }
+button.btn-save::before { background: rgba(57,255,20,0.15); }
+button.btn-save:hover span, button.btn-save:active span { color: var(--ng); }
+/* ══════════════════════════════════════════
+   BOOT SCREEN
+   ══════════════════════════════════════════ */
+#screen-boot {
+  position: absolute; inset: 0; z-index: 200;
+  background: #000;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+
+/* travelling scanline */
+#boot-scanline {
+  position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 3px,
+    rgba(57,255,20,0.06) 3px, rgba(57,255,20,0.06) 4px
+  );
+  animation: scanroll 6s linear infinite;
+}
+/* bright sweep line */
+#boot-scanline::after {
+  content: '';
+  position: absolute; left: 0; right: 0; height: 3px;
+  background: rgba(57,255,20,0.25);
+  box-shadow: 0 0 18px 6px rgba(57,255,20,0.15);
+  animation: bootSweep 2.4s linear infinite;
+}
+@keyframes bootSweep {
+  from { top: -3px; }
+  to   { top: 100%; }
+}
+
+#boot-content {
+  position: relative; z-index: 1;
+  width: min(520px, 90vw);
+  display: flex; flex-direction: column;
+  align-items: flex-start; gap: 24px;
+}
+
+/* Logo */
+#boot-logo-wrap {
+  width: 100%; text-align: left;
+  opacity: 0; animation: bootFadeIn 0.4s ease-out 0.2s forwards;
+}
+#boot-logo {
+  font-size: clamp(1.8rem, 6vw, 3rem);
+  font-weight: 900; letter-spacing: clamp(4px,1.5vw,10px);
+  color: var(--ng); text-shadow: var(--glow2);
+  border-bottom: 1px solid rgba(57,255,20,0.3);
+  padding-bottom: 8px; margin-bottom: 4px;
+}
+#boot-logo-sub {
+  font-size: clamp(0.42rem, 1.3vw, 0.58rem);
+  letter-spacing: clamp(5px, 2vw, 12px);
+  color: rgba(57,255,20,0.4);
+}
+
+/* Terminal section */
+#boot-term-wrap {
+  width: 100%;
+  font-size: clamp(0.58rem, 1.6vw, 0.74rem);
+  line-height: 1.85;
+  text-transform: none;
+  opacity: 0; animation: bootFadeIn 0.3s ease-out 0.5s forwards;
+  min-height: 120px;
+}
+#boot-lines { white-space: pre-wrap; }
+.bline { display: block; }
+.bline-dim    { color: rgba(57,255,20,0.4); }
+.bline-ok     { color: var(--ng); text-shadow: var(--glow); }
+.bline-warn   { color: var(--gold); text-shadow: 0 0 6px rgba(255,215,0,0.4); }
+.bline-bright { color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.4); }
+.bline-red    { color: var(--red); text-shadow: 0 0 6px rgba(255,58,58,0.4); }
+.bline-indent { color: rgba(57,255,20,0.55); padding-left: 1.4em; }
+#boot-cursor {
+  color: var(--ng); animation: termBlink 0.7s step-end infinite;
+  font-size: clamp(0.58rem, 1.6vw, 0.74rem);
+}
+
+/* Progress bar */
+#boot-bar-wrap {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  opacity: 0; animation: bootFadeIn 0.3s ease-out 0.6s forwards;
+}
+#boot-bar-label {
+  font-size: clamp(0.42rem,1.2vw,0.54rem);
+  color: rgba(57,255,20,0.5); letter-spacing: 3px; white-space: nowrap;
+}
+#boot-bar-outer {
+  flex: 1; height: 6px; border: 1px solid rgba(57,255,20,0.35);
+  background: rgba(0,0,0,0.6);
+}
+#boot-bar-inner {
+  height: 100%; width: 0%;
+  background: var(--ng);
+  box-shadow: var(--glow);
+  transition: width 0.18s ease-out;
+}
+#boot-bar-pct {
+  font-size: clamp(0.42rem,1.2vw,0.54rem);
+  color: var(--ng); min-width: 3em; text-align: right;
+}
+
+/* Wipe-out transition */
+@keyframes bootFadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+@keyframes bootWipeOut {
+  0%   { opacity:1; transform:scale(1); filter:brightness(1); }
+  60%  { opacity:1; transform:scale(1.01); filter:brightness(2); }
+  80%  { opacity:0.6; transform:scale(1.03); filter:brightness(3) blur(2px); }
+  100% { opacity:0; transform:scale(1.06); filter:brightness(0) blur(8px); }
+}
+#screen-boot.wipe-out {
+  animation: bootWipeOut 0.55s ease-in forwards;
+  pointer-events: none;
+}
 
 </style>
 </head>
@@ -744,6 +986,53 @@ button.btn-big { padding: clamp(10px,2.5vw,14px) clamp(20px,4vw,36px); font-size
 
 <div id="gc">
   <div id="crt-corners"></div>
+
+  <!-- BOOT SCREEN -->
+  <div id="screen-boot">
+    <div id="boot-scanline"></div>
+    <div id="boot-content">
+      <div id="boot-logo-wrap">
+        <div id="boot-logo">POLYHEDRAL</div>
+        
+      </div>
+      <div id="boot-term-wrap">
+        <div id="boot-lines"></div>
+        <span id="boot-cursor">█</span>
+      </div>
+      <div id="boot-bar-wrap">
+        <div id="boot-bar-label">LOADING</div>
+        <div id="boot-bar-outer"><div id="boot-bar-inner"></div></div>
+        <div id="boot-bar-pct">0%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN MENU -->
+  <div id="screen-menu">
+    <div id="menu-bg-grid"></div>
+    <div id="menu-content">
+      <div id="menu-logo">
+        <div id="menu-title">POLYHEDRAL</div>
+        <div id="menu-sub">ROLL · HOLD · SCORE</div>
+        
+      </div>
+
+      <div id="menu-boot-term">
+        <div id="menu-term-lines"></div>
+        <span id="menu-term-cursor">█</span>
+      </div>
+
+      <div id="menu-slots-wrap" class="hidden">
+        <div class="menu-section-label">// SELECT_SAVE_SLOT</div>
+        <div id="save-slots"></div>
+        <div id="menu-actions">
+          <button class="btn-red" onclick="menuNewGame(menuSelectedSlot)"><span>▶ NEW GAME</span></button>
+          <button id="menu-load-btn" class="btn-gold" onclick="menuLoadGame(menuSelectedSlot)" disabled><span>↺ LOAD GAME</span></button>
+        </div>
+        <div id="menu-hint">select a slot · new game overwrites · load restores progress</div>
+      </div>
+    </div>
+  </div>
 
   <!-- HEADER -->
   <div id="hdr">
@@ -831,6 +1120,7 @@ button.btn-big { padding: clamp(10px,2.5vw,14px) clamp(20px,4vw,36px); font-size
     <div class="shop-footer">
       <div class="shop-reroll-cost">REROLL SHOP: $<span id="reroll-cost-ui">5</span></div>
       <button onclick="rerollShop()" class="btn-red"><span>↻ REROLL_SHOP</span></button>
+      <button onclick="saveCurrentGame()" class="btn-save" title="Save game to active slot"><span>💾 SAVE</span></button>
       <button onclick="startNextRound()" class="btn-big"><span>▶▶ NEXT_CYCLE</span></button>
     </div>
   </div>
@@ -847,14 +1137,20 @@ button.btn-big { padding: clamp(10px,2.5vw,14px) clamp(20px,4vw,36px); font-size
   <div id="screen-over" class="hidden">
     <div class="go-title">CORE_DUMPED</div>
     <div class="go-stats" id="go-stats"></div>
-    <button onclick="location.reload()" class="btn-red btn-big"><span>↺ RELOAD_SYS</span></button>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+      <button onclick="location.reload()" class="btn-red btn-big"><span>↺ RELOAD_SYS</span></button>
+      <button onclick="goToMenu()" class="btn-big"><span>⌂ MAIN MENU</span></button>
+    </div>
   </div>
 
   <!-- WIN -->
   <div id="screen-win" class="hidden">
     <div class="win-title">⬡ SYSTEM_CLEARED ⬡</div>
     <div class="go-stats" id="win-stats"></div>
-    <button onclick="location.reload()" class="btn-gold btn-big"><span>↺ NEW_GAME</span></button>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+      <button onclick="location.reload()" class="btn-gold btn-big"><span>↺ NEW_GAME</span></button>
+      <button onclick="goToMenu()" class="btn-big"><span>⌂ MAIN MENU</span></button>
+    </div>
   </div>
 </div>
 
@@ -1917,6 +2213,11 @@ function startNextRound() {
     buildAntePips();
     initBoard();
     updateUI();
+    // Auto-save on round start
+    try {
+      const data = serializeGame();
+      localStorage.setItem(SAVE_KEY + activeSlot, JSON.stringify(data));
+    } catch(e) {}
   });
 }
 
@@ -1931,8 +2232,376 @@ function winGame() {
 }
 
 // ══════════════════════════════════════════════════════
+//  SAVE / LOAD SYSTEM
+// ══════════════════════════════════════════════════════
+const SAVE_KEY = 'polyhedral_save_';
+const NUM_SLOTS = 3;
+let activeSlot = 0;     // which slot is in use during current run
+let menuSelectedSlot = 0;
+
+function getSaveSlots() {
+  const slots = [];
+  for(let i = 0; i < NUM_SLOTS; i++) {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY + i);
+      slots.push(raw ? JSON.parse(raw) : null);
+    } catch(e) { slots.push(null); }
+  }
+  return slots;
+}
+
+function serializeGame() {
+  // Deep-copy the parts of g that matter, strip functions
+  return {
+    ante: g.ante, round: g.round,
+    bank: g.bank, target: g.target,
+    baseMult: g.baseMult, baseChips: g.baseChips,
+    rerolls: g.rerolls, maxRerolls: g.maxRerolls,
+    roundScore: g.roundScore, totalScore: g.totalScore,
+    handsPlayed: g.handsPlayed,
+    handLevels: { ...g.handLevels },
+    jokers: g.jokers.map(j => ({ ...j })),
+    consumables: [...g.consumables],
+    dice: g.dice.map(d => ({
+      v: d.v, held: d.held, shattered: d.shattered,
+      material: d.material, sides: [...d.sides],
+      woodenBonus: d.woodenBonus || 0,
+    })),
+    hasInterest: g.hasInterest || false,
+    hasInterestPrime: g.hasInterestPrime || false,
+    startingChips: g.startingChips || 0,
+    glassShatterProof: g.glassShatterProof || false,
+    savedAt: Date.now(),
+  };
+}
+
+function deserializeGame(data) {
+  g.ante = data.ante; g.round = data.round;
+  g.bank = data.bank; g.target = data.target;
+  g.baseMult = data.baseMult; g.baseChips = data.baseChips;
+  g.rerolls = data.rerolls; g.maxRerolls = data.maxRerolls;
+  g.roundScore = data.roundScore; g.totalScore = data.totalScore;
+  g.handsPlayed = data.handsPlayed || 0;
+  g.handLevels = { ...g.handLevels, ...data.handLevels };
+  g.jokers = data.jokers || [];
+  g.consumables = data.consumables || [];
+  g.hasInterest = data.hasInterest || false;
+  g.hasInterestPrime = data.hasInterestPrime || false;
+  g.startingChips = data.startingChips || 0;
+  g.glassShatterProof = data.glassShatterProof || false;
+  g.dice = (data.dice || []).map(d => ({
+    v: d.v, held: false, shattered: d.shattered || false,
+    material: d.material || 'stone',
+    sides: d.sides || [1,2,3,4,5,6],
+    woodenBonus: d.woodenBonus || 0,
+  }));
+  g.firstRollDone = false;
+  g.glassRerolled = false;
+  g.firstRollDone = false;
+}
+
+function saveCurrentGame() {
+  try {
+    const data = serializeGame();
+    localStorage.setItem(SAVE_KEY + activeSlot, JSON.stringify(data));
+    notify('GAME SAVED · SLOT ' + (activeSlot + 1), 'good');
+  } catch(e) {
+    notify('SAVE FAILED', 'bad');
+  }
+}
+
+function deleteSave(slot) {
+  localStorage.removeItem(SAVE_KEY + slot);
+}
+
+function slotSummary(data) {
+  if(!data) return { name:'EMPTY', detail:'no save data', hasData: false };
+  const d = new Date(data.savedAt);
+  const timeStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  return {
+    name: `ANTE ${data.ante}  CYCLE ${data.round}`,
+    detail: `$${data.bank} · ${data.totalScore}pts · ${data.jokers.length} jokers · ${timeStr}`,
+    hasData: true,
+  };
+}
+
+// ══════════════════════════════════════════════════════
+//  MAIN MENU SYSTEM
+// ══════════════════════════════════════════════════════
+
+function renderSaveSlots() {
+  const slots = getSaveSlots();
+  const container = document.getElementById('save-slots');
+  container.innerHTML = '';
+  slots.forEach((data, i) => {
+    const sum = slotSummary(data);
+    const div = document.createElement('div');
+    div.className = 'save-slot' + (i === menuSelectedSlot ? ' selected' : '');
+    div.innerHTML = `
+      <div class="slot-num">${i + 1}</div>
+      <div class="slot-info">
+        <div class="slot-name">${sum.name}</div>
+        <div class="slot-detail">${sum.detail}</div>
+      </div>
+      <div class="slot-badge ${sum.hasData ? 'has-save' : 'empty'}">${sum.hasData ? 'SAVED' : 'EMPTY'}</div>
+    `;
+    div.onclick = () => selectSlot(i);
+    container.appendChild(div);
+  });
+
+  // Update load button
+  const slots2 = getSaveSlots();
+  document.getElementById('menu-load-btn').disabled = !slots2[menuSelectedSlot];
+}
+
+function selectSlot(i) {
+  menuSelectedSlot = i;
+  renderSaveSlots();
+}
+
+function menuNewGame(slot) {
+  activeSlot = slot;
+  deleteSave(slot); // clear old save for this slot
+
+  const script = [
+    { type:'prompt', text:`polyhedral --new-game --slot=${slot + 1}`, charDelay:28 },
+    { type:'blank' },
+    { type:'output', text:'Initialising new session...', delay:80 },
+    { type:'output', text:`Save slot ${slot + 1} cleared.`, delay:60, style:'dim' },
+    { type:'output', text:'Dice pool: 5x D6 · STONE', delay:60 },
+    { type:'output', text:`Ante 1 loaded  ·  Quota: ${ANTE_TABLE[0][0]} pts`, delay:80, style:'bright' },
+    { type:'blank' },
+    { type:'output', text:'Good luck.', delay:80, style:'dim' },
+    { type:'pause', delay:300 },
+  ];
+
+  runMenuTerminal(script, () => {
+    document.getElementById('screen-menu').classList.add('hidden');
+    startFreshGame();
+  });
+}
+
+function menuLoadGame(slot) {
+  const slots = getSaveSlots();
+  const data = slots[slot];
+  if(!data) { notify('NO SAVE DATA','bad'); return; }
+  activeSlot = slot;
+
+  const script = [
+    { type:'prompt', text:`polyhedral --load --slot=${slot + 1}`, charDelay:28 },
+    { type:'blank' },
+    { type:'output', text:'Reading save data...', delay:80 },
+    { type:'output', text:`Ante ${data.ante}  ·  Cycle ${data.round}`, delay:60, style:'bright' },
+    { type:'output', text:`Score: ${data.totalScore}  ·  Credits: $${data.bank}`, delay:60 },
+    { type:'output', text:`Jokers: ${data.jokers.length}  ·  Dice: ${data.dice.length}`, delay:60 },
+    { type:'blank' },
+    { type:'output', text:'Session restored. Welcome back.', delay:80, style:'bright' },
+    { type:'pause', delay:300 },
+  ];
+
+  runMenuTerminal(script, () => {
+    deserializeGame(data);
+    document.getElementById('screen-menu').classList.add('hidden');
+    resumeGame();
+  });
+}
+
+function goToMenu() {
+  // Hide all screens, show menu
+  ['screen-shop','screen-over','screen-win','screen-terminal'].forEach(id => {
+    document.getElementById(id).classList.add('hidden');
+  });
+  document.getElementById('screen-menu').classList.remove('hidden');
+  renderSaveSlots();
+  // Show slots immediately (skip boot animation)
+  document.getElementById('menu-slots-wrap').classList.remove('hidden');
+  document.getElementById('menu-boot-term').style.display = 'none';
+}
+
+function startFreshGame() {
+  // Reset g to defaults
+  Object.assign(g, {
+    ante:1, round:1, rerolls:3, maxRerolls:3,
+    bank:4, target:30, runScore:0,
+    baseMult:1.0, baseChips:0,
+    dice:[], jokers:[], consumables:[],
+    firstRollDone:false, glassRerolled:false,
+    roundScore:0, shopRerollCost:5,
+    handsPlayed:0, totalScore:0,
+    hasInterest:false, hasInterestPrime:false,
+    startingChips:0, glassShatterProof:false,
+    handLevels:{ PAIR:1, TWO_PAIR:1, THREE_OF_A_KIND:1, STRAIGHT:1, FULL_HOUSE:1, FOUR_OF_A_KIND:1, FIVE_OF_A_KIND:1, SIX_OF_A_KIND:1, SEVEN_OF_A_KIND:1, EIGHT_OF_A_KIND:1, NINE_OF_A_KIND:1, TEN_OF_A_KIND:1, HIGH_CARD:1 },
+  });
+  initGame();
+}
+
+function resumeGame() {
+  // Re-render everything from loaded g state
+  renderJokers();
+  updateCons();
+  buildAntePips();
+  initBoard();
+  updateUI();
+  document.getElementById('roll-btn').disabled = false;
+  document.getElementById('cash-btn').disabled = true;
+  document.getElementById('hand-name').innerText = '–';
+  document.getElementById('score-total').innerText = '0';
+  document.getElementById('score-chips').innerHTML = '';
+  document.getElementById('score-bar-inner').style.width = '0%';
+  document.getElementById('score-progress-txt').innerText = `0 / ${g.target}`;
+}
+
+// ── MENU BOOT TERMINAL ──
+function runMenuTerminal(script, onComplete) {
+  const linesEl = document.getElementById('menu-term-lines');
+  const cursor  = document.getElementById('menu-term-cursor');
+  linesEl.innerHTML = '';
+  cursor.style.display = 'inline-block';
+  let i = 0;
+
+  function next() {
+    if(i >= script.length) {
+      cursor.style.display = 'none';
+      setTimeout(onComplete, 200);
+      return;
+    }
+    const entry = script[i++];
+    if(entry.type === 'pause') { setTimeout(next, entry.delay||400); return; }
+    if(entry.type === 'blank') {
+      const el = document.createElement('span');
+      el.className = 'mterm-line'; el.textContent = ' ';
+      linesEl.appendChild(el);
+      setTimeout(next, entry.delay||60);
+      return;
+    }
+    const el = document.createElement('span');
+    el.className = 'mterm-line mt-' + (entry.type === 'prompt' ? 'cmd' : (entry.style||'normal'));
+    linesEl.appendChild(el);
+    linesEl.parentNode.insertBefore(cursor, el.nextSibling);
+
+    if(entry.type === 'prompt') {
+      const text = entry.text||''; const cd = entry.charDelay||34; let ci=0;
+      function typeChar() {
+        if(ci<text.length){el.textContent+=text[ci++]; linesEl.scrollTop=linesEl.scrollHeight; setTimeout(typeChar, cd+(Math.random()*cd*0.4-cd*0.2));}
+        else setTimeout(next, entry.delay||100);
+      }
+      setTimeout(typeChar, entry.startDelay||0);
+    } else {
+      el.textContent = entry.text||'';
+      linesEl.scrollTop = linesEl.scrollHeight;
+      setTimeout(next, entry.delay||60);
+    }
+  }
+  next();
+}
+
+function bootMenu() {
+  const slots = getSaveSlots();
+  const hasSave = slots.some(s => s !== null);
+
+  const bootScript = [
+    { type:'output', text:'POLYHEDRAL OS', delay:0, style:'bright' },
+    { type:'output', text:'━━━━━━━━━━━━━━━━━━━━━━━━', delay:40, style:'dim' },
+    { type:'output', text:'Checking save memory...', delay:100, style:'dim' },
+    { type:'output', text: hasSave
+        ? `Found ${slots.filter(Boolean).length} save file(s).`
+        : 'No save data found.', delay:80 },
+    { type:'blank' },
+    { type:'prompt', text:'polyhedral --load-ui', charDelay:30 },
+    { type:'blank' },
+    { type:'output', text:'UI ready. Select a slot to begin.', delay:80, style:'bright' },
+    { type:'pause', delay:200 },
+  ];
+
+  runMenuTerminal(bootScript, () => {
+    document.getElementById('menu-slots-wrap').classList.remove('hidden');
+    renderSaveSlots();
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  BOOT ANIMATION
+// ══════════════════════════════════════════════════════
+function runBootAnimation(onComplete) {
+  const linesEl  = document.getElementById('boot-lines');
+  const cursor   = document.getElementById('boot-cursor');
+  const barInner = document.getElementById('boot-bar-inner');
+  const barPct   = document.getElementById('boot-bar-pct');
+
+  function setBar(pct) {
+    barInner.style.width = pct + '%';
+    barPct.textContent = pct + '%';
+  }
+
+  function addLine(text, cls, delay) {
+    return new Promise(res => setTimeout(() => {
+      const el = document.createElement('span');
+      el.className = 'bline ' + (cls || 'bline-dim');
+      el.textContent = text;
+      linesEl.appendChild(el);
+      linesEl.scrollTop = linesEl.scrollHeight;
+      res();
+    }, delay));
+  }
+
+  async function run() {
+    await addLine('POLYHEDRAL BIOS', 'bline-bright', 0);
+    await addLine('Copyright (c) POLY SYSTEMS — All rights reserved', 'bline-dim', 60);
+    await addLine('', 'bline-dim', 30);
+
+    await addLine('CPU ............ DICE-ENGINE-X   1.8 GHz', 'bline-dim', 120);  setBar(8);
+    await addLine('RAM ............ 512K ROLL BUFFER', 'bline-dim', 90);           setBar(16);
+    await addLine('STORAGE ........ POLY_FLASH  v4.1', 'bline-dim', 90);           setBar(22);
+    await addLine('', 'bline-dim', 20);
+
+    await addLine('Initialising dice physics engine...', 'bline-dim', 100);        setBar(28);
+    await addLine('  [OK]  Randomiser seeded', 'bline-indent', 70);               setBar(34);
+    await addLine('  [OK]  Material renderer loaded', 'bline-indent', 70);        setBar(40);
+    await addLine('  [OK]  Hand detection matrix ready', 'bline-indent', 70);     setBar(46);
+    await addLine('', 'bline-dim', 20);
+
+    await addLine('Loading shop catalog...', 'bline-dim', 100);                    setBar(52);
+    await addLine('  [OK]  28 jokers registered', 'bline-indent', 60);            setBar(57);
+    await addLine('  [OK]  14 consumables registered', 'bline-indent', 60);       setBar(62);
+    await addLine('  [OK]  10 die materials registered', 'bline-indent', 60);     setBar(67);
+    await addLine('', 'bline-dim', 20);
+
+    await addLine('Checking save memory...', 'bline-dim', 110);                    setBar(74);
+    const slots = getSaveSlots();
+    const hasSave = slots.some(s => s !== null);
+    const saveCount = slots.filter(Boolean).length;
+    if(hasSave) {
+      await addLine(`  [OK]  ${saveCount} save slot(s) found`, 'bline-indent', 70); setBar(80);
+    } else {
+      await addLine('  [--]  No save data', 'bline-indent', 70);                  setBar(80);
+    }
+    await addLine('', 'bline-dim', 20);
+
+    await addLine('Running integrity check...', 'bline-dim', 100);                setBar(87);
+    await addLine('  [OK]  All systems nominal', 'bline-indent', 80);             setBar(94);
+    await addLine('', 'bline-dim', 20);
+
+    setBar(100);
+    await addLine('POLYHEDRAL OS ready.', 'bline-ok', 120);
+
+    cursor.style.display = 'none';
+
+    // Brief pause, then wipe out
+    await new Promise(res => setTimeout(res, 700));
+
+    const screen = document.getElementById('screen-boot');
+    screen.classList.add('wipe-out');
+    await new Promise(res => setTimeout(res, 560));
+    screen.style.display = 'none';
+    onComplete();
+  }
+
+  run();
+}
+
+// ══════════════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════════════
-initGame();</script>
+runBootAnimation(() => bootMenu());</script>
 </body>
 </html>

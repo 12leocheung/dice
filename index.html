@@ -326,6 +326,15 @@ button.btn-big { padding: clamp(10px,2.5vw,14px) clamp(20px,4vw,36px); font-size
 }
 .joker-card:hover { transform: translateY(-4px); z-index: 10; }
 .joker-card .jname { font-size: clamp(0.5rem,1.4vw,0.65rem); font-weight: bold; display: block; }
+.joker-sell-btn {
+  display: block; margin-top: 4px;
+  font-size: clamp(0.36rem,1vw,0.44rem); letter-spacing: 1px;
+  color: var(--red); border: 1px solid var(--red);
+  padding: 1px 5px; cursor: pointer; text-align: center;
+  opacity: 0.7; transition: all 0.12s;
+  background: transparent;
+}
+.joker-sell-btn:hover { background: var(--red); color: #000; opacity: 1; }
 .joker-rarity-common   { border-color:var(--ng);    color:var(--ng);    background:rgba(57,255,20,0.06); }
 .joker-rarity-uncommon { border-color:var(--blue);  color:var(--blue);  background:rgba(0,184,255,0.06); }
 .joker-rarity-rare     { border-color:var(--gold);  color:var(--gold);  background:rgba(255,215,0,0.06); }
@@ -1170,11 +1179,26 @@ let g = {
   handLevels: { 'PAIR':1, 'TWO_PAIR':1, 'THREE_OF_A_KIND':1, 'STRAIGHT':1, 'FULL_HOUSE':1, 'FOUR_OF_A_KIND':1, 'FIVE_OF_A_KIND':1, 'SIX_OF_A_KIND':1, 'SEVEN_OF_A_KIND':1, 'EIGHT_OF_A_KIND':1, 'NINE_OF_A_KIND':1, 'TEN_OF_A_KIND':1, 'HIGH_CARD':1 }
 };
 
-// ANTE structure: [target, reward]
+// ANTE_TABLE: each ante has [cycle1_quota, cycle2_quota, cycle3_quota, shop_reward]
 const ANTE_TABLE = [
-  [30, 3], [60, 4], [100, 5], [160, 5], [250, 6], [400, 7], [650, 8]
+  { quotas: [100,  200,  400],   reward: 4  },  // Ante 1
+  { quotas: [800,  1600, 3200],  reward: 6  },  // Ante 2
+  { quotas: [2000, 4000, 8000],  reward: 8  },  // Ante 3
+  { quotas: [5000, 10000,20000], reward: 10 },  // Ante 4
+  { quotas: [15000,30000,60000], reward: 13 },  // Ante 5
+  { quotas: [40000,80000,160000],reward: 16 },  // Ante 6
+  { quotas: [100000,200000,400000],reward:20},  // Ante 7
 ];
 const MAX_ANTE = ANTE_TABLE.length;
+
+function getQuota(ante, round) {
+  const entry = ANTE_TABLE[ante - 1];
+  if(!entry) return 999999;
+  return entry.quotas[round - 1] || entry.quotas[entry.quotas.length - 1];
+}
+function getReward(ante) {
+  return ANTE_TABLE[ante - 1]?.reward || 5;
+}
 
 // HAND DEFINITIONS — N_OF_A_KIND is generated dynamically for N>=5
 const HANDS = {
@@ -1220,7 +1244,7 @@ function initGame() {
     makeDie([1,2,3,4,5,6], 'stone'),
     makeDie([1,2,3,4,5,6], 'stone'),
   ];
-  g.target = ANTE_TABLE[g.ante-1][0];
+  g.target = getQuota(g.ante, g.round);
   updateUI(); initBoard();
   buildAntePips();
 }
@@ -1688,35 +1712,35 @@ function rerollShop() {
 // ══════════════════════════════════════════════════════
 const SHOP_CATALOG = [
   // ── JOKERS ──
-  { tab:'jokers', rarity:'common',    name:'SNIPER.MOD',     id:'SNIPER',      cost:4,  desc:'Gain +1.5 Mult whenever a 6 appears in your roll.',       effect:'+1.5M on 6',          f:()=>addJoker({id:'SNIPER',     name:'SNIPER.MOD',     desc:'+1.5M on 6',     rarity:'common'}) },
-  { tab:'jokers', rarity:'common',    name:'GAMBLER.MOD',    id:'GAMBLER',     cost:4,  desc:'Gain +8 Chips whenever a 1 appears.',                      effect:'+8C on 1',            f:()=>addJoker({id:'GAMBLER',    name:'GAMBLER.MOD',    desc:'+8C on 1',       rarity:'common'}) },
-  { tab:'jokers', rarity:'common',    name:'HEDGER.LOG',     id:'HEDGER',      cost:5,  desc:'Gain +1 Chip for each die in your roll.',                  effect:'+1C per die',         f:()=>addJoker({id:'HEDGER',     name:'HEDGER.LOG',     desc:'+1C/die',        rarity:'common'}) },
-  { tab:'jokers', rarity:'common',    name:'OVERCLOCK.EXE',  id:'OVERCLOCK',   cost:6,  desc:'Always gain +0.8 Mult regardless of hand.',               effect:'+0.8M always',        f:()=>addJoker({id:'OVERCLOCK',  name:'OVERCLOCK.EXE',  desc:'+0.8M always',   rarity:'common'}) },
-  { tab:'jokers', rarity:'common',    name:'ENTROPY.DLL',    id:'ENTROPY',     cost:5,  desc:'Gain 0–4 random bonus Chips each score. Glitches on roll.',effect:'0-4C chaos',          f:()=>addJoker({id:'ENTROPY',    name:'ENTROPY.DLL',    desc:'chaos chips',    rarity:'common'}) },
-  { tab:'jokers', rarity:'common',    name:'SYMMETRY.SYS',   id:'SYMMETRY',    cost:5,  desc:'Gain +6 Chips if all dice values are in ascending order.', effect:'+6C if sorted',       f:()=>addJoker({id:'SYMMETRY',   name:'SYMMETRY.SYS',   desc:'+6C sorted',     rarity:'common'}) },
-  { tab:'jokers', rarity:'common',    name:'LOWBALL.EXE',    id:'LOWBALL',     cost:4,  desc:'Gain +1 Chip for every die showing a value of 3 or less.', effect:'+1C per low die',     f:()=>addJoker({id:'LOWBALL',    name:'LOWBALL.EXE',    desc:'+1C low dice',   rarity:'common'}) },
-  { tab:'jokers', rarity:'common',    name:'COUNTER.LOG',    id:'COUNTER',     cost:5,  desc:'Gain +1 Mult for each unique die value showing.',          effect:'+1M per unique val',  f:()=>addJoker({id:'COUNTER',    name:'COUNTER.LOG',    desc:'+1M unique vals',rarity:'common'}) },
-  { tab:'jokers', rarity:'common',    name:'ECHO.MOD',       id:'ECHO',        cost:5,  desc:'Gain +2 Chips for each pair of matching dice.',            effect:'+2C per pair',        f:()=>addJoker({id:'ECHO',       name:'ECHO.MOD',       desc:'+2C per match',  rarity:'common'}) },
-  { tab:'jokers', rarity:'uncommon',  name:'DOUBLER.EXE',    id:'DOUBLER',     cost:7,  desc:'Pairs and Two Pair give +2 Mult.',                        effect:'+2M on pairs',        f:()=>addJoker({id:'DOUBLER',    name:'DOUBLER.EXE',    desc:'+2M pairs',      rarity:'uncommon'}) },
-  { tab:'jokers', rarity:'uncommon',  name:'TRIPWIRE.MOD',   id:'TRIPWIRE',    cost:8,  desc:'Three of a Kind and Full House give +2.5 Mult.',          effect:'+2.5M on trips',      f:()=>addJoker({id:'TRIPWIRE',   name:'TRIPWIRE.MOD',   desc:'+2.5M trips',    rarity:'uncommon'}) },
-  { tab:'jokers', rarity:'uncommon',  name:'STRAIGHTER.EXE', id:'STRAIGHTER',  cost:8,  desc:'Straights grant +12 bonus Chips.',                        effect:'+12C on straights',   f:()=>addJoker({id:'STRAIGHTER', name:'STRAIGHTER.EXE', desc:'+12C straight',  rarity:'uncommon'}) },
-  { tab:'jokers', rarity:'uncommon',  name:'HIGHROLLER.DLL', id:'HIGHROLLER',  cost:9,  desc:'Gain Chips equal to the highest die value.',              effect:'+max val chips',      f:()=>addJoker({id:'HIGHROLLER', name:'HIGHROLLER.DLL', desc:'+max C',         rarity:'uncommon'}) },
-  { tab:'jokers', rarity:'uncommon',  name:'BANKER.EXE',     id:'BANKER',      cost:10, desc:'Gain bonus Chips equal to 20% of your credits.',          effect:'Chips = bank/5',      f:()=>addJoker({id:'BANKER',     name:'BANKER.EXE',     desc:'bank% chips',    rarity:'uncommon'}) },
-  { tab:'jokers', rarity:'uncommon',  name:'DEBUGGER.MOD',   id:'DEBUGGER',    cost:8,  desc:'Gain +1 Mult if you still have all rerolls when scoring.', effect:'+1M full rerolls',   f:()=>addJoker({id:'DEBUGGER',   name:'DEBUGGER.MOD',   desc:'+1M no rerolls', rarity:'uncommon'}) },
-  { tab:'jokers', rarity:'uncommon',  name:'SCAVENGER.EXE',  id:'SCAVENGER',   cost:7,  desc:'Gain +3 Chips for each die NOT held when scoring.',       effect:'+3C per free die',    f:()=>addJoker({id:'SCAVENGER',  name:'SCAVENGER.EXE',  desc:'+3C unheld dice',rarity:'uncommon'}) },
-  { tab:'jokers', rarity:'uncommon',  name:'ACCUMULATOR.DLL',id:'ACCUMULATOR', cost:9,  desc:'Gain +0.5 Mult for each reroll you used this round.',     effect:'+0.5M per reroll',    f:()=>addJoker({id:'ACCUMULATOR',name:'ACCUMULATOR.DLL',desc:'+0.5M/reroll',   rarity:'uncommon'}) },
-  { tab:'jokers', rarity:'uncommon',  name:'TWINPEAK.MOD',   id:'TWINPEAK',    cost:8,  desc:'If your highest and lowest dice differ by 1 or less, gain +3 Mult.', effect:'+3M tight spread', f:()=>addJoker({id:'TWINPEAK', name:'TWINPEAK.MOD', desc:'+3M tight spread',rarity:'uncommon'}) },
-  { tab:'jokers', rarity:'rare',      name:'VALIDATOR.EXE',  id:'VALIDATOR',   cost:12, desc:'Gain +2.5 Mult if ALL dice show even numbers.',           effect:'+2.5M all even',      f:()=>addJoker({id:'VALIDATOR',  name:'VALIDATOR.EXE',  desc:'+2.5M all even', rarity:'rare'}) },
-  { tab:'jokers', rarity:'rare',      name:'PRIME.CORE',     id:'PRIME',       cost:13, desc:'Gain +1.5M and +10C if all dice are prime numbers.',      effect:'+1.5M+10C all prime', f:()=>addJoker({id:'PRIME',      name:'PRIME.CORE',     desc:'prime bonus',    rarity:'rare'}) },
-  { tab:'jokers', rarity:'rare',      name:'OVERKILL.MOD',   id:'OVERKILL',    cost:12, desc:'Gain +1.5 Mult once round score exceeds 50% of quota.',   effect:'+1.5M at halfway',    f:()=>addJoker({id:'OVERKILL',   name:'OVERKILL.MOD',   desc:'+1.5M halfway',  rarity:'rare'}) },
-  { tab:'jokers', rarity:'rare',      name:'FIREWALL.DLL',   id:'FIREWALL',    cost:11, desc:'Gain +0.3 Mult for each joker you own.',                  effect:'+0.3M per joker',     f:()=>addJoker({id:'FIREWALL',   name:'FIREWALL.DLL',   desc:'+0.3M/joker',    rarity:'rare'}) },
-  { tab:'jokers', rarity:'rare',      name:'PALINDROME.SYS', id:'PALINDROME',  cost:11, desc:'Gain +4 Chips if dice values read same forwards & backwards.', effect:'+4C palindrome',  f:()=>addJoker({id:'PALINDROME', name:'PALINDROME.SYS', desc:'+4C palindrome', rarity:'rare'}) },
-  { tab:'jokers', rarity:'rare',      name:'MATERIALIZER.EXE',id:'MATERIALIZER',cost:13,desc:'Gain +1 Chip for each distinct die material in your pool.',effect:'+1C per material',   f:()=>addJoker({id:'MATERIALIZER',name:'MATERIALIZER.EXE',desc:'+1C/material',  rarity:'rare'}) },
-  { tab:'jokers', rarity:'rare',      name:'THRESHOLD.MOD',  id:'THRESHOLD',   cost:12, desc:'Gain +2 Mult if your score formula chips exceed 30.',     effect:'+2M if chips>30',     f:()=>addJoker({id:'THRESHOLD',  name:'THRESHOLD.MOD',  desc:'+2M chips>30',   rarity:'rare'}) },
-  { tab:'jokers', rarity:'legendary', name:'ALL-IN.EXE',     id:'ALLIN',       cost:18, desc:'DOUBLE your Mult on Four of a Kind or better.',          effect:'x2M on quads+',       f:()=>addJoker({id:'ALLIN',      name:'ALL-IN.EXE',     desc:'x2M quads+',     rarity:'legendary'}) },
-  { tab:'jokers', rarity:'legendary', name:'MIRRORDICE.SYS', id:'MIRRORDICE',  cost:20, desc:'Gain +4 Mult if all dice show the same value.',           effect:'+4M all matching',    f:()=>addJoker({id:'MIRRORDICE', name:'MIRRORDICE.SYS', desc:'+4M all same',   rarity:'legendary'}) },
-  { tab:'jokers', rarity:'legendary', name:'GODMODE.EXE',    id:'GODMODE',     cost:25, desc:'Gain +1 Mult for every point of score already banked this ante.', effect:'+1M per banked score', f:()=>addJoker({id:'GODMODE', name:'GODMODE.EXE',  desc:'+M=roundScore',  rarity:'legendary'}) },
-  { tab:'jokers', rarity:'legendary', name:'RECURSION.DLL',  id:'RECURSION',   cost:22, desc:'Score is calculated twice and the higher result is used.', effect:'Score max of 2 rolls', f:()=>addJoker({id:'RECURSION', name:'RECURSION.DLL', desc:'best of 2 calc', rarity:'legendary'}) },
+  { tab:'jokers', rarity:'common',    name:'SNIPER.MOD',     id:'SNIPER',      cost:4,  desc:'Gain +1.5 Mult whenever a 6 appears in your roll.',       effect:'+1.5M on 6',          f:()=>addJoker({cost:4,id:'SNIPER',     name:'SNIPER.MOD',     desc:'+1.5M on 6',     rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'GAMBLER.MOD',    id:'GAMBLER',     cost:4,  desc:'Gain +8 Chips whenever a 1 appears.',                      effect:'+8C on 1',            f:()=>addJoker({cost:4,id:'GAMBLER',    name:'GAMBLER.MOD',    desc:'+8C on 1',       rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'HEDGER.LOG',     id:'HEDGER',      cost:5,  desc:'Gain +1 Chip for each die in your roll.',                  effect:'+1C per die',         f:()=>addJoker({cost:5,id:'HEDGER',     name:'HEDGER.LOG',     desc:'+1C/die',        rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'OVERCLOCK.EXE',  id:'OVERCLOCK',   cost:6,  desc:'Always gain +0.8 Mult regardless of hand.',               effect:'+0.8M always',        f:()=>addJoker({cost:6,id:'OVERCLOCK',  name:'OVERCLOCK.EXE',  desc:'+0.8M always',   rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'ENTROPY.DLL',    id:'ENTROPY',     cost:5,  desc:'Gain 0–4 random bonus Chips each score. Glitches on roll.',effect:'0-4C chaos',          f:()=>addJoker({cost:5,id:'ENTROPY',    name:'ENTROPY.DLL',    desc:'chaos chips',    rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'SYMMETRY.SYS',   id:'SYMMETRY',    cost:5,  desc:'Gain +6 Chips if all dice values are in ascending order.', effect:'+6C if sorted',       f:()=>addJoker({cost:5,id:'SYMMETRY',   name:'SYMMETRY.SYS',   desc:'+6C sorted',     rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'LOWBALL.EXE',    id:'LOWBALL',     cost:4,  desc:'Gain +1 Chip for every die showing a value of 3 or less.', effect:'+1C per low die',     f:()=>addJoker({cost:4,id:'LOWBALL',    name:'LOWBALL.EXE',    desc:'+1C low dice',   rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'COUNTER.LOG',    id:'COUNTER',     cost:5,  desc:'Gain +1 Mult for each unique die value showing.',          effect:'+1M per unique val',  f:()=>addJoker({cost:5,id:'COUNTER',    name:'COUNTER.LOG',    desc:'+1M unique vals',rarity:'common'}) },
+  { tab:'jokers', rarity:'common',    name:'ECHO.MOD',       id:'ECHO',        cost:5,  desc:'Gain +2 Chips for each pair of matching dice.',            effect:'+2C per pair',        f:()=>addJoker({cost:5,id:'ECHO',       name:'ECHO.MOD',       desc:'+2C per match',  rarity:'common'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'DOUBLER.EXE',    id:'DOUBLER',     cost:7,  desc:'Pairs and Two Pair give +2 Mult.',                        effect:'+2M on pairs',        f:()=>addJoker({cost:7,id:'DOUBLER',    name:'DOUBLER.EXE',    desc:'+2M pairs',      rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'TRIPWIRE.MOD',   id:'TRIPWIRE',    cost:8,  desc:'Three of a Kind and Full House give +2.5 Mult.',          effect:'+2.5M on trips',      f:()=>addJoker({cost:8,id:'TRIPWIRE',   name:'TRIPWIRE.MOD',   desc:'+2.5M trips',    rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'STRAIGHTER.EXE', id:'STRAIGHTER',  cost:8,  desc:'Straights grant +12 bonus Chips.',                        effect:'+12C on straights',   f:()=>addJoker({cost:8,id:'STRAIGHTER', name:'STRAIGHTER.EXE', desc:'+12C straight',  rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'HIGHROLLER.DLL', id:'HIGHROLLER',  cost:9,  desc:'Gain Chips equal to the highest die value.',              effect:'+max val chips',      f:()=>addJoker({cost:9,id:'HIGHROLLER', name:'HIGHROLLER.DLL', desc:'+max C',         rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'BANKER.EXE',     id:'BANKER',      cost:10, desc:'Gain bonus Chips equal to 20% of your credits.',          effect:'Chips = bank/5',      f:()=>addJoker({cost:10,id:'BANKER',     name:'BANKER.EXE',     desc:'bank% chips',    rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'DEBUGGER.MOD',   id:'DEBUGGER',    cost:8,  desc:'Gain +1 Mult if you still have all rerolls when scoring.', effect:'+1M full rerolls',   f:()=>addJoker({cost:8,id:'DEBUGGER',   name:'DEBUGGER.MOD',   desc:'+1M no rerolls', rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'SCAVENGER.EXE',  id:'SCAVENGER',   cost:7,  desc:'Gain +3 Chips for each die NOT held when scoring.',       effect:'+3C per free die',    f:()=>addJoker({cost:7,id:'SCAVENGER',  name:'SCAVENGER.EXE',  desc:'+3C unheld dice',rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'ACCUMULATOR.DLL',id:'ACCUMULATOR', cost:9,  desc:'Gain +0.5 Mult for each reroll you used this round.',     effect:'+0.5M per reroll',    f:()=>addJoker({cost:9,id:'ACCUMULATOR',name:'ACCUMULATOR.DLL',desc:'+0.5M/reroll',   rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'uncommon',  name:'TWINPEAK.MOD',   id:'TWINPEAK',    cost:8,  desc:'If your highest and lowest dice differ by 1 or less, gain +3 Mult.', effect:'+3M tight spread', f:()=>addJoker({cost:8,id:'TWINPEAK', name:'TWINPEAK.MOD', desc:'+3M tight spread',rarity:'uncommon'}) },
+  { tab:'jokers', rarity:'rare',      name:'VALIDATOR.EXE',  id:'VALIDATOR',   cost:12, desc:'Gain +2.5 Mult if ALL dice show even numbers.',           effect:'+2.5M all even',      f:()=>addJoker({cost:12,id:'VALIDATOR',  name:'VALIDATOR.EXE',  desc:'+2.5M all even', rarity:'rare'}) },
+  { tab:'jokers', rarity:'rare',      name:'PRIME.CORE',     id:'PRIME',       cost:13, desc:'Gain +1.5M and +10C if all dice are prime numbers.',      effect:'+1.5M+10C all prime', f:()=>addJoker({cost:13,id:'PRIME',      name:'PRIME.CORE',     desc:'prime bonus',    rarity:'rare'}) },
+  { tab:'jokers', rarity:'rare',      name:'OVERKILL.MOD',   id:'OVERKILL',    cost:12, desc:'Gain +1.5 Mult once round score exceeds 50% of quota.',   effect:'+1.5M at halfway',    f:()=>addJoker({cost:12,id:'OVERKILL',   name:'OVERKILL.MOD',   desc:'+1.5M halfway',  rarity:'rare'}) },
+  { tab:'jokers', rarity:'rare',      name:'FIREWALL.DLL',   id:'FIREWALL',    cost:11, desc:'Gain +0.3 Mult for each joker you own.',                  effect:'+0.3M per joker',     f:()=>addJoker({cost:11,id:'FIREWALL',   name:'FIREWALL.DLL',   desc:'+0.3M/joker',    rarity:'rare'}) },
+  { tab:'jokers', rarity:'rare',      name:'PALINDROME.SYS', id:'PALINDROME',  cost:11, desc:'Gain +4 Chips if dice values read same forwards & backwards.', effect:'+4C palindrome',  f:()=>addJoker({cost:11,id:'PALINDROME', name:'PALINDROME.SYS', desc:'+4C palindrome', rarity:'rare'}) },
+  { tab:'jokers', rarity:'rare',      name:'MATERIALIZER.EXE',id:'MATERIALIZER',cost:13,desc:'Gain +1 Chip for each distinct die material in your pool.',effect:'+1C per material',   f:()=>addJoker({cost:13,id:'MATERIALIZER',name:'MATERIALIZER.EXE',desc:'+1C/material',  rarity:'rare'}) },
+  { tab:'jokers', rarity:'rare',      name:'THRESHOLD.MOD',  id:'THRESHOLD',   cost:12, desc:'Gain +2 Mult if your score formula chips exceed 30.',     effect:'+2M if chips>30',     f:()=>addJoker({cost:12,id:'THRESHOLD',  name:'THRESHOLD.MOD',  desc:'+2M chips>30',   rarity:'rare'}) },
+  { tab:'jokers', rarity:'legendary', name:'ALL-IN.EXE',     id:'ALLIN',       cost:18, desc:'DOUBLE your Mult on Four of a Kind or better.',          effect:'x2M on quads+',       f:()=>addJoker({cost:18,id:'ALLIN',      name:'ALL-IN.EXE',     desc:'x2M quads+',     rarity:'legendary'}) },
+  { tab:'jokers', rarity:'legendary', name:'MIRRORDICE.SYS', id:'MIRRORDICE',  cost:20, desc:'Gain +4 Mult if all dice show the same value.',           effect:'+4M all matching',    f:()=>addJoker({cost:20,id:'MIRRORDICE', name:'MIRRORDICE.SYS', desc:'+4M all same',   rarity:'legendary'}) },
+  { tab:'jokers', rarity:'legendary', name:'GODMODE.EXE',    id:'GODMODE',     cost:25, desc:'Gain +1 Mult for every point of score already banked this ante.', effect:'+1M per banked score', f:()=>addJoker({cost:25,id:'GODMODE', name:'GODMODE.EXE',  desc:'+M=roundScore',  rarity:'legendary'}) },
+  { tab:'jokers', rarity:'legendary', name:'RECURSION.DLL',  id:'RECURSION',   cost:22, desc:'Score is calculated twice and the higher result is used.', effect:'Score max of 2 rolls', f:()=>addJoker({cost:22,id:'RECURSION', name:'RECURSION.DLL', desc:'best of 2 calc', rarity:'legendary'}) },
 
   // ── CONSUMABLES ──
   { tab:'consumables', rarity:'common',   name:'DEBUG.EXE',    id:'DEBUG_EXE',   cost:3,  desc:'Restore all rerolls instantly.',                        f:()=>addConsumable('DEBUG_EXE') },
@@ -1793,13 +1817,65 @@ function addJoker(jokerDef) {
   renderJokers();
 }
 
+function sellJoker(id) {
+  const idx = g.jokers.findIndex(j => j.id === id);
+  if(idx === -1) return;
+  const j = g.jokers[idx];
+  const sellPrice = Math.floor((j.cost || 6) / 2);
+  g.jokers.splice(idx, 1);
+  g.bank += sellPrice;
+  updateUI();
+  renderJokers();
+  // Quick terminal flash for sell
+  flashSell(j.name, sellPrice);
+  notify(`SOLD: ${j.name} +$${sellPrice}`, 'gold');
+  calculateScore();
+}
+
+function flashSell(name, price) {
+  const flash = document.getElementById('purchase-flash');
+  const lines = document.getElementById('pf-lines');
+  if(pfTimer) { clearTimeout(pfTimer); pfTimer = null; }
+  lines.innerHTML = '';
+
+  let cmdEl = document.createElement('span');
+  cmdEl.className = 'pf-line pf-cmd';
+  lines.appendChild(cmdEl);
+  const cmd = `market --sell-joker "${name}"`;
+  let ci = 0;
+  const typeCmd = () => {
+    if(ci < cmd.length) { cmdEl.textContent += cmd[ci++]; setTimeout(typeCmd, 16 + Math.random()*8); }
+  };
+  typeCmd();
+
+  const d = cmd.length * 18 + 30;
+  setTimeout(() => {
+    const el = document.createElement('span');
+    el.className = 'pf-line pf-ok';
+    el.textContent = `  Sold for $${price}. Credits updated.`;
+    lines.appendChild(el);
+  }, d);
+
+  flash.classList.remove('hidden','hiding');
+  flash.classList.add('visible');
+  pfTimer = setTimeout(() => {
+    flash.classList.remove('visible');
+    flash.classList.add('hiding');
+    setTimeout(() => { flash.classList.add('hidden'); flash.classList.remove('hiding'); }, 220);
+    pfTimer = null;
+  }, d + 900);
+}
+
 function renderJokers() {
   const list = document.getElementById('joker-list');
   list.innerHTML = '';
+  const inShop = !document.getElementById('screen-shop').classList.contains('hidden');
   g.jokers.forEach(j => {
     const card = document.createElement('div');
     card.className = `joker-card joker-rarity-${j.rarity}`;
-    card.innerHTML = `<span class="jname">${j.name}</span>${j.desc}`;
+    const sellPrice = Math.floor((j.cost || 6) / 2);
+    card.innerHTML = `<span class="jname">${j.name}</span>${j.desc}` +
+      (inShop ? `<span class="joker-sell-btn" onclick="sellJoker('${j.id}')">SELL $${sellPrice}</span>` : '');
     list.appendChild(card);
   });
   document.getElementById('joker-count').innerText = g.jokers.length;
@@ -2175,7 +2251,7 @@ function startNextRound() {
   if(newAnte) { g.ante++; g.round = 1; }
   if(g.ante > MAX_ANTE) { winGame(); return; }
 
-  g.target = ANTE_TABLE[g.ante-1][0];
+  g.target = getQuota(g.ante, g.round);
   g.roundScore = 0;
   g.rerolls = g.maxRerolls;
   g.firstRollDone = false;
@@ -2369,7 +2445,7 @@ function menuNewGame(slot) {
     { type:'output', text:'Initialising new session...', delay:80 },
     { type:'output', text:`Save slot ${slot + 1} cleared.`, delay:60, style:'dim' },
     { type:'output', text:'Dice pool: 5x D6 · STONE', delay:60 },
-    { type:'output', text:`Ante 1 loaded  ·  Quota: ${ANTE_TABLE[0][0]} pts`, delay:80, style:'bright' },
+    { type:'output', text:`Ante 1 loaded  ·  Quota: ${ANTE_TABLE[0].quotas[0]} pts`, delay:80, style:'bright' },
     { type:'blank' },
     { type:'output', text:'Good luck.', delay:80, style:'dim' },
     { type:'pause', delay:300 },
@@ -2422,7 +2498,7 @@ function startFreshGame() {
   // Reset g to defaults
   Object.assign(g, {
     ante:1, round:1, rerolls:3, maxRerolls:3,
-    bank:4, target:30, runScore:0,
+    bank:4, target:100, runScore:0,
     baseMult:1.0, baseChips:0,
     dice:[], jokers:[], consumables:[],
     firstRollDone:false, glassRerolled:false,

@@ -666,6 +666,75 @@ button.btn-big { padding: clamp(10px,2.5vw,14px) clamp(20px,4vw,36px); font-size
   .shop-reroll-cost { width: 100%; order: -1; }
 }
 
+/* ── TERMINAL CUTSCENE ── */
+#screen-terminal {
+  position: absolute; inset: 0; z-index: 70;
+  background: #000; display: flex;
+  flex-direction: column; justify-content: center; align-items: flex-start;
+  padding: clamp(20px, 5vw, 60px) clamp(20px, 6vw, 70px);
+  overflow: hidden;
+}
+#screen-terminal::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    to bottom, transparent 0px, transparent 3px,
+    rgba(57,255,20,0.04) 3px, rgba(57,255,20,0.04) 4px
+  );
+  pointer-events: none;
+}
+#term-body {
+  width: 100%; max-width: 700px;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: clamp(0.65rem, 1.8vw, 0.9rem);
+  color: var(--ng); text-shadow: var(--glow);
+  line-height: 1.9;
+  text-transform: none;
+}
+#term-lines { white-space: pre-wrap; word-break: break-word; }
+.term-line { display: block; animation: termFadeIn 0.1s ease-out; }
+.term-line.prompt::before { content: '> '; color: var(--ng3); }
+.term-line.output { color: rgba(57,255,20,0.7); padding-left: 1.2em; }
+.term-line.output.dim { color: rgba(57,255,20,0.4); }
+.term-line.output.bright { color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.5); }
+.term-line.output.gold { color: var(--gold); text-shadow: 0 0 8px rgba(255,215,0,0.6); }
+.term-line.output.red { color: var(--red); text-shadow: 0 0 8px rgba(255,58,58,0.6); }
+.term-line.output.blue { color: var(--blue); text-shadow: 0 0 8px rgba(0,184,255,0.5); }
+.term-line.output.purple { color: var(--purple); text-shadow: 0 0 8px rgba(191,95,255,0.5); }
+.term-line.blank { color: transparent; user-select: none; }
+@keyframes termFadeIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:none} }
+#term-cursor {
+  display: inline-block; color: var(--ng);
+  animation: termBlink 0.7s step-end infinite;
+  font-size: clamp(0.65rem, 1.8vw, 0.9rem);
+  text-shadow: var(--glow2); margin-top: 2px;
+}
+@keyframes termBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+/* ── PURCHASE FLASH TERMINAL ── */
+#purchase-flash {
+  position: absolute; bottom: 60px; left: 0; right: 0;
+  background: rgba(0,0,0,0.92);
+  border-top: 1px solid var(--ng);
+  border-bottom: 1px solid var(--ng);
+  padding: 10px clamp(14px,4vw,28px);
+  z-index: 60;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: clamp(0.6rem, 1.6vw, 0.78rem);
+  text-transform: none;
+  pointer-events: none;
+  box-shadow: 0 0 20px rgba(57,255,20,0.15);
+}
+#purchase-flash.hidden { display: none; }
+#pf-lines { white-space: pre-wrap; }
+.pf-line { display: block; color: var(--ng); text-shadow: var(--glow); line-height: 1.8; }
+.pf-line.pf-cmd::before { content: '> '; color: var(--ng3); }
+.pf-line.pf-ok  { color: var(--gold); text-shadow: 0 0 8px rgba(255,215,0,0.5); }
+.pf-line.pf-dim { color: rgba(57,255,20,0.45); }
+@keyframes pfSlideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+@keyframes pfSlideOut { from{opacity:1;transform:none} to{opacity:0;transform:translateY(4px)} }
+#purchase-flash.visible { animation: pfSlideIn 0.12s ease-out; }
+#purchase-flash.hiding  { animation: pfSlideOut 0.2s ease-in forwards; }
+
 </style>
 </head>
 <body>
@@ -753,10 +822,24 @@ button.btn-big { padding: clamp(10px,2.5vw,14px) clamp(20px,4vw,36px); font-size
       <div class="shop-tab" data-tab="dice" onclick="switchTab('dice')">DICE_MODS</div>
     </div>
     <div id="shop-content"></div>
+
+    <!-- Quick purchase flash terminal -->
+    <div id="purchase-flash" class="hidden">
+      <div id="pf-lines"></div>
+    </div>
+
     <div class="shop-footer">
       <div class="shop-reroll-cost">REROLL SHOP: $<span id="reroll-cost-ui">5</span></div>
       <button onclick="rerollShop()" class="btn-red"><span>↻ REROLL_SHOP</span></button>
       <button onclick="startNextRound()" class="btn-big"><span>▶▶ NEXT_CYCLE</span></button>
+    </div>
+  </div>
+
+  <!-- TERMINAL CUTSCENE -->
+  <div id="screen-terminal" class="hidden">
+    <div id="term-body">
+      <div id="term-lines"></div>
+      <div id="term-cursor">█</div>
     </div>
   </div>
 
@@ -948,12 +1031,6 @@ function runRoll(free=false) {
 
 
 
-function gameOver() {
-  shake('xl');
-  document.getElementById('screen-over').classList.remove('hidden');
-  document.getElementById('go-stats').innerHTML =
-    `ANTE: ${g.ante} &nbsp;|&nbsp; CYCLE: ${g.round}<br>FINAL SCORE: ${g.totalScore}<br>JOKERS ACQUIRED: ${g.jokers.length}`;
-}
 
 // ══════════════════════════════════════════════════════
 //  SCORING
@@ -1221,43 +1298,6 @@ let currentShopTab = 'jokers';
 let shopRerollCount = 0;
 let currentShopItems = {};
 
-function enterShop() {
-  if(!g.firstRollDone) { notify('ROLL FIRST','bad'); return; }
-
-  // Score current dice
-  const score = calculateScore();
-  g.roundScore += score;
-  g.totalScore += score;
-  g.handsPlayed++;
-  triggerJokerEvent('onScore', score);
-  popScore('+' + score, document.getElementById('score-total'));
-  shake(score > 500 ? 'xl' : score > 150 ? 'lg' : 'sm');
-  updateScoreBar();
-
-  // Check quota
-  if(g.roundScore < g.target) {
-    // Failed quota — game over
-    setTimeout(() => gameOver(), 400);
-    return;
-  }
-
-  // Earn reward based on score — $1 per 10 points scored, minimum 3, maximum 15
-  const reward = Math.max(3, Math.min(15, Math.floor(score / 10)));
-  g.bank += reward;
-  notify(`+$${reward} FROM SCORE (${score} pts)`, 'gold');
-
-  // Reset for shop
-  g.shopRerollCost = 5;
-  shopRerollCount = 0;
-  currentShopTab = 'jokers';
-  currentShopItems = {};
-
-  document.getElementById('shop-bank-ui').innerText = g.bank;
-  document.getElementById('screen-shop').classList.remove('hidden');
-  document.querySelectorAll('.shop-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'jokers'));
-  genShopForTab('jokers');
-  renderShopContent();
-}
 
 function switchTab(tab) {
   currentShopTab = tab;
@@ -1322,8 +1362,8 @@ function renderShopContent() {
         item.f();
         document.getElementById('shop-bank-ui').innerText = g.bank;
         updateUI();
-        renderShopContent(); // re-render recalculates all cant-afford states live
-        notify(`PURCHASED: ${item.name}`, 'good');
+        flashPurchase(item);
+        renderShopContent();
         shake('sm');
       };
     }
@@ -1472,61 +1512,7 @@ function renderJokers() {
 // ══════════════════════════════════════════════════════
 //  ROUND PROGRESSION
 // ══════════════════════════════════════════════════════
-function startNextRound() {
-  // Advance round / ante
-  g.round++;
-  if(g.round > 3) {
-    g.ante++;
-    g.round = 1;
-    if(g.ante > MAX_ANTE) { winGame(); return; }
-  }
 
-  g.target = ANTE_TABLE[g.ante-1][0];
-  g.roundScore = 0;
-  g.rerolls = g.maxRerolls;
-  g.firstRollDone = false;
-  g.baseChips = 0;
-  g.shopRerollCost = 5;
-  currentShopItems = {};
-
-  // Interest earnings
-  if(g.hasInterestPrime) { const earn=Math.floor(g.bank/3); g.bank+=earn; if(earn>0) notify(`+$${earn} PRIME INTEREST`,'gold'); }
-  else if(g.hasInterest) { const earn=Math.floor(g.bank/5); g.bank+=earn; if(earn>0) notify(`+$${earn} INTEREST`,'gold'); }
-
-  // Starting chips bonus
-  if(g.startingChips) g.baseChips += g.startingChips;
-
-  // Wooden dice gain +1 to max face each round
-  g.dice.forEach(d => {
-    if(d.material === 'wooden') {
-      d.woodenBonus = (d.woodenBonus || 0) + 1;
-      d.sides = Array.from({length: 6 + d.woodenBonus}, (_,i) => i+1);
-    }
-  });
-
-  g.glassRerolled = false;
-  g.dice.forEach(d => { d.held=false; d.v=null; if(d.shattered) d.shattered=false; });
-
-  document.getElementById('screen-shop').classList.add('hidden');
-  document.getElementById('roll-btn').disabled = false;
-  document.getElementById('cash-btn').disabled = true;
-  document.getElementById('rerolls-ui').innerText = g.rerolls;
-  document.getElementById('hand-name').innerText = '–';
-  document.getElementById('score-total').innerText = '0';
-  document.getElementById('score-chips').innerHTML = '';
-  document.getElementById('score-bar-inner').style.width = '0%';
-  document.getElementById('score-progress-txt').innerText = `0 / ${g.target}`;
-
-  buildAntePips();
-  initBoard();
-  updateUI();
-}
-
-function winGame() {
-  document.getElementById('screen-win').classList.remove('hidden');
-  document.getElementById('win-stats').innerHTML = `ALL ${MAX_ANTE} ANTES CLEARED<br>TOTAL SCORE: ${g.totalScore}<br>CREDITS REMAINING: $${g.bank}`;
-  shake('xl');
-}
 
 // ══════════════════════════════════════════════════════
 //  UI HELPERS
@@ -1597,9 +1583,356 @@ setInterval(() => {
 }, 4000);
 
 // ══════════════════════════════════════════════════════
+//  TERMINAL CUTSCENE ENGINE
+// ══════════════════════════════════════════════════════
+
+// Each script entry: { type, text, delay, charDelay }
+// type: 'prompt' | 'output' | 'blank' | 'pause'
+// charDelay: ms per character (for typing effect on prompts)
+// delay: ms to wait before showing this line
+
+function runTerminal(script, onComplete) {
+  const screen = document.getElementById('screen-terminal');
+  const linesEl = document.getElementById('term-lines');
+  const cursor = document.getElementById('term-cursor');
+
+  linesEl.innerHTML = '';
+  cursor.style.display = 'inline-block';
+  screen.classList.remove('hidden');
+
+  let i = 0;
+
+  function next() {
+    if(i >= script.length) {
+      // Done — hide after a beat
+      cursor.style.display = 'none';
+      setTimeout(() => {
+        screen.classList.add('hidden');
+        linesEl.innerHTML = '';
+        if(onComplete) onComplete();
+      }, 500);
+      return;
+    }
+
+    const entry = script[i++];
+
+    if(entry.type === 'pause') {
+      setTimeout(next, entry.delay || 400);
+      return;
+    }
+
+    if(entry.type === 'blank') {
+      const el = document.createElement('span');
+      el.className = 'term-line blank';
+      el.textContent = ' ';
+      linesEl.appendChild(el);
+      setTimeout(next, entry.delay || 80);
+      return;
+    }
+
+    const el = document.createElement('span');
+    el.className = `term-line ${entry.type}` + (entry.style ? ` ${entry.style}` : '');
+    linesEl.appendChild(el);
+
+    // Move cursor after this line
+    cursor.parentNode.insertBefore(cursor, el.nextSibling);
+
+    if(entry.type === 'prompt') {
+      // Type character by character
+      const text = entry.text || '';
+      const cd = entry.charDelay !== undefined ? entry.charDelay : 38;
+      let ci = 0;
+      function typeChar() {
+        if(ci < text.length) {
+          el.textContent += text[ci++];
+          // Scroll into view
+          linesEl.scrollTop = linesEl.scrollHeight;
+          setTimeout(typeChar, cd + (Math.random() * cd * 0.4 - cd * 0.2));
+        } else {
+          setTimeout(next, entry.delay || 120);
+        }
+      }
+      setTimeout(typeChar, entry.startDelay || 0);
+    } else {
+      // Output lines appear instantly (or with small delay)
+      el.textContent = entry.text || '';
+      linesEl.scrollTop = linesEl.scrollHeight;
+      setTimeout(next, entry.delay || 60);
+    }
+  }
+
+  next();
+}
+
+// ── SCRIPT BUILDERS ──
+
+function termScriptUplink(score, reward, roundNum, anteNum) {
+  const quota = g.target;
+  const excess = Math.max(0, score - quota);
+  return [
+    { type:'prompt', text:'polyhedral --uplink --submit-score', charDelay:30 },
+    { type:'blank' },
+    { type:'output', text:'Connecting to POLYHEDRAL scoring network...', delay:80 },
+    { type:'output', text:'████████████████ 100%', delay:120, style:'dim' },
+    { type:'blank' },
+    { type:'output', text:`SESSION  : ANTE_${anteNum}  CYCLE_${roundNum}`, delay:60 },
+    { type:'output', text:`QUOTA    : ${quota} pts`, delay:60 },
+    { type:'output', text:`SCORED   : ${score} pts`, delay:60, style: score >= quota ? 'gold' : 'red' },
+    { type:'output', text:`SURPLUS  : +${excess} pts`, delay:60, style:'dim' },
+    { type:'blank' },
+    { type:'output', text:'Quota status: ' + (score >= quota ? '[ PASSED ]' : '[ FAILED ]'), delay:80, style: score >= quota ? 'bright' : 'red' },
+    { type:'blank' },
+    { type:'prompt', text:`polyhedral --credit-transfer --amount=${reward}`, charDelay:28 },
+    { type:'blank' },
+    { type:'output', text:`Transfer approved. +$${reward} credited to account.`, delay:100, style:'gold' },
+    { type:'blank' },
+    { type:'prompt', text:'polyhedral --open-market', charDelay:35 },
+    { type:'blank' },
+    { type:'output', text:'MARKET_UPLINK established. Hardware available.', delay:80 },
+    { type:'pause', delay:300 },
+  ];
+}
+
+function termScriptNewRound(roundNum, anteNum, target, newAnte) {
+  const lines = [
+    { type:'prompt', text:'polyhedral --next-cycle', charDelay:32 },
+    { type:'blank' },
+  ];
+  if(newAnte) {
+    lines.push({ type:'output', text:`Ante ${anteNum - 1} complete. Escalating threat level...`, delay:100, style:'red' });
+    lines.push({ type:'output', text:'████████████████████████', delay:80, style:'red' });
+    lines.push({ type:'blank' });
+    lines.push({ type:'output', text:`ANTE_${anteNum} initialised.`, delay:80, style:'bright' });
+    lines.push({ type:'output', text:`New quota threshold: ${target} pts`, delay:60, style:'gold' });
+  } else {
+    lines.push({ type:'output', text:`Cycle ${roundNum - 1} archived.`, delay:80, style:'dim' });
+    lines.push({ type:'output', text:`Loading cycle ${roundNum}...`, delay:80 });
+    lines.push({ type:'output', text:`Quota: ${target} pts`, delay:60, style:'gold' });
+  }
+  lines.push({ type:'blank' });
+  lines.push({ type:'prompt', text:'polyhedral --roll-init', charDelay:30 });
+  lines.push({ type:'blank' });
+  lines.push({ type:'output', text:'Dice pool loaded. Ready to roll.', delay:80, style:'bright' });
+  lines.push({ type:'pause', delay:200 });
+  return lines;
+}
+
+function termScriptGameOver(ante, round, totalScore, jokerCount) {
+  return [
+    { type:'output', text:'CRITICAL FAULT DETECTED', delay:0, style:'red' },
+    { type:'output', text:'███████████████████████', delay:60, style:'red' },
+    { type:'blank' },
+    { type:'prompt', text:'polyhedral --diagnose --emergency', charDelay:24 },
+    { type:'blank' },
+    { type:'output', text:`Failure point: ANTE_${ante}  CYCLE_${round}`, delay:80, style:'red' },
+    { type:'output', text:`Quota not met. Session terminated.`, delay:60, style:'red' },
+    { type:'blank' },
+    { type:'output', text:'── SESSION REPORT ──', delay:80, style:'dim' },
+    { type:'output', text:`Total score  : ${totalScore}`, delay:50 },
+    { type:'output', text:`Jokers owned : ${jokerCount}`, delay:50 },
+    { type:'output', text:`Ante reached : ${ante} / 7`, delay:50 },
+    { type:'blank' },
+    { type:'output', text:'Core memory dump initiated...', delay:120, style:'dim' },
+    { type:'output', text:'PROCESS TERMINATED.', delay:80, style:'red' },
+    { type:'pause', delay:500 },
+  ];
+}
+
+function termScriptWin(totalScore, bank) {
+  return [
+    { type:'output', text:'ALL ANTES CLEARED', delay:0, style:'gold' },
+    { type:'output', text:'████████████████████████████', delay:80, style:'gold' },
+    { type:'blank' },
+    { type:'prompt', text:'polyhedral --verify-completion --full', charDelay:26 },
+    { type:'blank' },
+    { type:'output', text:'Verifying ante records...', delay:100, style:'dim' },
+    { type:'output', text:'[1/7] .... PASSED', delay:70, style:'dim' },
+    { type:'output', text:'[2/7] .... PASSED', delay:70, style:'dim' },
+    { type:'output', text:'[3/7] .... PASSED', delay:70, style:'dim' },
+    { type:'output', text:'[4/7] .... PASSED', delay:70, style:'dim' },
+    { type:'output', text:'[5/7] .... PASSED', delay:70, style:'dim' },
+    { type:'output', text:'[6/7] .... PASSED', delay:70, style:'dim' },
+    { type:'output', text:'[7/7] .... PASSED', delay:70, style:'gold' },
+    { type:'blank' },
+    { type:'output', text:'SYSTEM CLEARED.', delay:80, style:'bright' },
+    { type:'output', text:`Final score  : ${totalScore}`, delay:60, style:'gold' },
+    { type:'output', text:`Credits left : $${bank}`, delay:60, style:'gold' },
+    { type:'blank' },
+    { type:'prompt', text:'polyhedral --congratulations', charDelay:30 },
+    { type:'blank' },
+    { type:'output', text:'You have defeated POLYHEDRAL.', delay:100, style:'bright' },
+    { type:'output', text:'Well played.', delay:80, style:'dim' },
+    { type:'pause', delay:600 },
+  ];
+}
+
+// ── PURCHASE FLASH ──
+let pfTimer = null;
+
+function flashPurchase(item) {
+  const flash = document.getElementById('purchase-flash');
+  const lines = document.getElementById('pf-lines');
+
+  // Cancel any running timer
+  if(pfTimer) { clearTimeout(pfTimer); pfTimer = null; }
+
+  // Tab-type commands vary by item type
+  const cmdMap = {
+    jokers:      `market --install-joker "${item.name}"`,
+    consumables: `market --acquire-item "${item.name}"`,
+    upgrades:    `market --apply-upgrade "${item.name}"`,
+    dice:        `market --forge-die "${item.name}"`,
+  };
+  const cmd = cmdMap[item.tab] || `market --purchase "${item.name}"`;
+
+  const rarityLabels = { common:'COMMON', uncommon:'UNCOMMON', rare:'RARE', legendary:'LEGENDARY' };
+  const rar = rarityLabels[item.rarity] || item.rarity.toUpperCase();
+
+  lines.innerHTML = '';
+
+  const addLine = (text, cls, delay) => setTimeout(() => {
+    const el = document.createElement('span');
+    el.className = `pf-line ${cls}`;
+    el.textContent = text;
+    lines.appendChild(el);
+  }, delay);
+
+  // Line 1: command (types fast)
+  let cmdEl = document.createElement('span');
+  cmdEl.className = 'pf-line pf-cmd';
+  lines.appendChild(cmdEl);
+  let ci = 0;
+  const typeCmd = () => {
+    if(ci < cmd.length) { cmdEl.textContent += cmd[ci++]; setTimeout(typeCmd, 18 + Math.random()*10); }
+  };
+  typeCmd();
+
+  const typeDelay = cmd.length * 20 + 40;
+  addLine(`  [${rar}]  ${item.effect || item.desc.slice(0,40)}`, 'pf-dim', typeDelay);
+  addLine(`  -$${item.cost}  ·  balance: $${g.bank}`, 'pf-ok', typeDelay + 50);
+
+  // Show
+  flash.classList.remove('hidden', 'hiding');
+  flash.classList.add('visible');
+
+  // Auto-hide after 1.6s
+  pfTimer = setTimeout(() => {
+    flash.classList.remove('visible');
+    flash.classList.add('hiding');
+    setTimeout(() => {
+      flash.classList.add('hidden');
+      flash.classList.remove('hiding');
+    }, 220);
+    pfTimer = null;
+  }, typeDelay + 900);
+}
+
+
+
+function enterShop() {
+  if(!g.firstRollDone) { notify('ROLL FIRST','bad'); return; }
+
+  const score = calculateScore();
+  g.roundScore += score;
+  g.totalScore += score;
+  g.handsPlayed++;
+  triggerJokerEvent('onScore', score);
+  popScore('+' + score, document.getElementById('score-total'));
+  shake(score > 500 ? 'xl' : score > 150 ? 'lg' : 'sm');
+  updateScoreBar();
+
+  if(g.roundScore < g.target) {
+    setTimeout(() => {
+      const script = termScriptGameOver(g.ante, g.round, g.totalScore, g.jokers.length);
+      runTerminal(script, () => {
+        document.getElementById('screen-over').classList.remove('hidden');
+        document.getElementById('go-stats').innerHTML =
+          `ANTE: ${g.ante} &nbsp;|&nbsp; CYCLE: ${g.round}<br>FINAL SCORE: ${g.totalScore}<br>JOKERS ACQUIRED: ${g.jokers.length}`;
+      });
+    }, 400);
+    return;
+  }
+
+  const reward = Math.max(3, Math.min(15, Math.floor(score / 10)));
+  g.bank += reward;
+
+  g.shopRerollCost = 5;
+  shopRerollCount = 0;
+  currentShopTab = 'jokers';
+  currentShopItems = {};
+
+  const script = termScriptUplink(score, reward, g.round, g.ante);
+  runTerminal(script, () => {
+    document.getElementById('shop-bank-ui').innerText = g.bank;
+    document.getElementById('screen-shop').classList.remove('hidden');
+    document.querySelectorAll('.shop-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'jokers'));
+    genShopForTab('jokers');
+    renderShopContent();
+  });
+}
+
+function startNextRound() {
+  const newAnteThisRound = g.round >= 3;
+
+  g.round++;
+  const newAnte = g.round > 3;
+  if(newAnte) { g.ante++; g.round = 1; }
+  if(g.ante > MAX_ANTE) { winGame(); return; }
+
+  g.target = ANTE_TABLE[g.ante-1][0];
+  g.roundScore = 0;
+  g.rerolls = g.maxRerolls;
+  g.firstRollDone = false;
+  g.baseChips = 0;
+  g.shopRerollCost = 5;
+  currentShopItems = {};
+
+  if(g.hasInterestPrime) { const earn=Math.floor(g.bank/3); g.bank+=earn; if(earn>0) notify(`+$${earn} PRIME INTEREST`,'gold'); }
+  else if(g.hasInterest) { const earn=Math.floor(g.bank/5); g.bank+=earn; if(earn>0) notify(`+$${earn} INTEREST`,'gold'); }
+  if(g.startingChips) g.baseChips += g.startingChips;
+
+  g.dice.forEach(d => {
+    if(d.material === 'wooden') {
+      d.woodenBonus = (d.woodenBonus || 0) + 1;
+      d.sides = Array.from({length: 6 + d.woodenBonus}, (_,i) => i+1);
+    }
+  });
+
+  g.glassRerolled = false;
+  g.dice.forEach(d => { d.held=false; d.v=null; if(d.shattered) d.shattered=false; });
+
+  const script = termScriptNewRound(g.round, g.ante, g.target, newAnte);
+  runTerminal(script, () => {
+    if(pfTimer) { clearTimeout(pfTimer); pfTimer = null; }
+    document.getElementById('purchase-flash').classList.add('hidden');
+    document.getElementById('screen-shop').classList.add('hidden');
+    document.getElementById('roll-btn').disabled = false;
+    document.getElementById('cash-btn').disabled = true;
+    document.getElementById('rerolls-ui').innerText = g.rerolls;
+    document.getElementById('hand-name').innerText = '–';
+    document.getElementById('score-total').innerText = '0';
+    document.getElementById('score-chips').innerHTML = '';
+    document.getElementById('score-bar-inner').style.width = '0%';
+    document.getElementById('score-progress-txt').innerText = `0 / ${g.target}`;
+    buildAntePips();
+    initBoard();
+    updateUI();
+  });
+}
+
+function winGame() {
+  shake('xl');
+  const script = termScriptWin(g.totalScore, g.bank);
+  runTerminal(script, () => {
+    document.getElementById('screen-win').classList.remove('hidden');
+    document.getElementById('win-stats').innerHTML =
+      `ALL ${MAX_ANTE} ANTES CLEARED<br>TOTAL SCORE: ${g.totalScore}<br>CREDITS REMAINING: $${g.bank}`;
+  });
+}
+
+// ══════════════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════════════
-initGame();
-</script>
+initGame();</script>
 </body>
 </html>
